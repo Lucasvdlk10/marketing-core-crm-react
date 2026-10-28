@@ -12,6 +12,7 @@ vi.mock('../lib/remoteCrm',()=>({
 import {TeamPage} from '../pages/TeamPage';
 
 const memberships=[
+  {workspace_id:'workspace-1',user_id:'master-1',role:'owner',active:true,joined_at:'2026-09-01T00:00:00Z'},
   {workspace_id:'workspace-1',user_id:'user-1',role:'admin',active:true,joined_at:'2026-10-01T00:00:00Z'},
   {workspace_id:'workspace-1',user_id:'user-2',role:'sdr',active:true,joined_at:'2026-10-02T00:00:00Z'},
 ];
@@ -27,6 +28,7 @@ function respond(path:string){
 
 describe('TeamPage autenticada',()=>{
   beforeEach(()=>{request.mockReset().mockImplementation(respond);invokeFunction.mockReset();rpc.mockReset().mockImplementation((name:string)=>name==='core_team_member_directory'?Promise.resolve([
+    {user_id:'master-1',full_name:'Lucas Master',email:'lucas@example.com'},
     {user_id:'user-1',full_name:'Ana Admin',email:'ana@example.com'},
     {user_id:'user-2',full_name:'Bruno SDR',email:'bruno@example.com'},
   ]):Promise.resolve(null))});
@@ -34,6 +36,8 @@ describe('TeamPage autenticada',()=>{
   it('lista membros reais e convites pendentes sem transformar convite em membro ativo',async()=>{
     render(<TeamPage/>);
     expect(await screen.findByText('Ana Admin')).toBeInTheDocument();
+    expect(screen.queryByText('Lucas Master')).not.toBeInTheDocument();
+    expect(screen.queryByText('lucas@example.com')).not.toBeInTheDocument();
     expect(screen.getByText('Bruno SDR')).toBeInTheDocument();
     expect(screen.getByText('pending@example.com')).toBeInTheDocument();
     expect(screen.getByText('Pendente')).toBeInTheDocument();
@@ -92,9 +96,9 @@ describe('TeamPage autenticada',()=>{
     await user.click(screen.getByRole('button',{name:'Editar Ana Admin'}));
     await user.clear(screen.getByLabelText('Nome do membro'));
     await user.type(screen.getByLabelText('Nome do membro'),'Ana Atualizada');
-    await user.selectOptions(screen.getByLabelText('Função do membro'),'owner');
+    await user.selectOptions(screen.getByLabelText('Função do membro'),'closer');
     await user.click(screen.getByRole('button',{name:'Salvar alterações'}));
-    expect(rpc).toHaveBeenCalledWith('core_team_update_member_profile',{w:'workspace-1',p_user:'user-1',p_full_name:'Ana Atualizada',p_role:'owner',p_active:true});
+    expect(rpc).toHaveBeenCalledWith('core_team_update_member_profile',{w:'workspace-1',p_user:'user-1',p_full_name:'Ana Atualizada',p_role:'closer',p_active:true});
 
     await user.click(screen.getByRole('button',{name:'Inativar Bruno SDR'}));
     await user.click(screen.getByRole('button',{name:'Confirmar inativação'}));

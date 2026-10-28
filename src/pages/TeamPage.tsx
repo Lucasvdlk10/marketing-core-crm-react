@@ -17,7 +17,7 @@ type RemoteInvitation={id:string;workspace_id:string;email:string;role:string;st
 type Dialog='invite'|'edit'|'inactivate'|'delete'|'reasons'|null;
 
 const defaultReasons=['Férias','Licença','Afastamento médico','Suspensão','Outro'];
-const remoteRoles=[['owner','Proprietário'],['admin','Administrador'],['sdr','SDR'],['closer','Closer'],['viewer','Visualizador']] as const;
+const remoteRoles=[['admin','Administrador'],['marketing_manager','Gestor de marketing'],['sdr','SDR'],['closer','Closer'],['viewer','Visualizador']] as const;
 const roleLabel=(role:string)=>remoteRoles.find(([value])=>value===role)?.[1]||role;
 
 export function TeamPage({preview=false}:{preview?:boolean}){
@@ -49,7 +49,7 @@ export function TeamPage({preview=false}:{preview?:boolean}){
     crmApi.request(`/rest/v1/core_memberships?select=workspace_id,user_id,role,active,joined_at&workspace_id=eq.${encodeURIComponent(workspace)}&order=joined_at.asc`) as Promise<RemoteMembership[]>,
     crmApi.request(`/rest/v1/core_invitations?select=id,workspace_id,email,role,status,expires_at,created_at&workspace_id=eq.${encodeURIComponent(workspace)}&status=eq.pending&order=created_at.desc`) as Promise<RemoteInvitation[]>,
     crmApi.rpc('core_team_member_directory',{w:workspace}) as Promise<RemoteMemberDirectory[]>,
-  ]);const identities=new Map(directory.map(item=>[item.user_id,item]));const snapshotNames=new Map((getRemoteSnapshot()?.members||[]).map(item=>[item.user_id,item.full_name]));setMembers(remoteMembers.map((member,index)=>{const identity=identities.get(member.user_id);return{id:member.user_id,name:identity?.full_name||snapshotNames.get(member.user_id)||'Membro',email:identity?.email||'',role:roleLabel(member.role),roleCode:member.role,status:member.active?'Ativo':'Inativo',color:['#5578E8','#37A67E','#9A6AE8','#D98941'][index%4],tasks:[],activeTasks:0,assignedLeads:0}}));setInvitations(pending)};
+  ]);const identities=new Map(directory.map(item=>[item.user_id,item]));const snapshotNames=new Map((getRemoteSnapshot()?.members||[]).map(item=>[item.user_id,item.full_name]));const teamMembers=remoteMembers.filter(member=>member.role!=='owner');setMembers(teamMembers.map((member,index)=>{const identity=identities.get(member.user_id);return{id:member.user_id,name:identity?.full_name||snapshotNames.get(member.user_id)||'Membro',email:identity?.email||'',role:roleLabel(member.role),roleCode:member.role,status:member.active?'Ativo':'Inativo',color:['#5578E8','#37A67E','#9A6AE8','#D98941'][index%4],tasks:[],activeTasks:0,assignedLeads:0}}));setInvitations(pending.filter(invitation=>invitation.role!=='owner'))};
   useEffect(()=>{if(preview)return;let active=true;setLoading(true);loadRemote().catch(error=>{if(active)setPageError(error instanceof Error?error.message:'Não foi possível carregar a equipe.')}).finally(()=>{if(active)setLoading(false)});return()=>{active=false}},[preview]);
 
   const updateStatus=(index:number,field:'name'|'color',value:string)=>setStatuses(current=>current.map((item,itemIndex)=>itemIndex===index?{...item,[field]:value}:item));
