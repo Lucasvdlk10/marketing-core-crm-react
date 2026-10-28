@@ -13,6 +13,9 @@ describe('SegmentsPage',()=>{
     expect(screen.getByRole('heading',{name:'Listas de segmentação'})).toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:/Nova lista/i}));
     expect(screen.getByRole('dialog',{name:'Criar lista de segmentação'})).toBeInTheDocument();
+    const filterGroup=screen.getByRole('group',{name:'Filtros da lista'});
+    expect(filterGroup).toHaveTextContent('Refine quais contatos entrarão nesta lista');
+    expect(screen.getByTestId('segment-active-filter-count')).toHaveTextContent('0 ativos');
 
     await user.type(screen.getByLabelText('Nome da lista'),'Leads para reativação');
     await user.selectOptions(screen.getByLabelText('Filtrar lista por tag'),'VIP');

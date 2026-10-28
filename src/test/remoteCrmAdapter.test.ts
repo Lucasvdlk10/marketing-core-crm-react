@@ -85,6 +85,15 @@ describe("authenticated remote adapter", () => {
     );
   });
 
+  it("does not block CRM bootstrap when the member role has no automation permission",async()=>{
+    api.request.mockImplementation((path:string)=>path.includes('core_memberships')?[{...membership,role:'closer'}]:respond(path));
+    api.rpc.mockImplementation((name:string)=>name==='core_automation_list'?Promise.reject(new Error('Forbidden')):name==='core_dashboard_summary'?{}:[]);
+    const snapshot=await bootstrapRemoteCrm(session);
+    expect(snapshot.membership.role).toBe('closer');
+    expect(snapshot.automations).toEqual([]);
+    expect(api.rpc).not.toHaveBeenCalledWith('core_automation_list',expect.anything());
+  });
+
   it("restores the session-scoped snapshot only for the same authenticated user",async()=>{
     await bootstrapRemoteCrm(session);
     expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toContain('workspace-1');
@@ -173,5 +182,32 @@ describe("authenticated remote adapter", () => {
       connections: [{ from: "trigger-1", to: "task-1" }],
       nodes: [{ kind: "trigger" }, { kind: "task" }],
     });
+  });
+
+  it("round-trips every supported automation action and condition contract", () => {
+    const nodes = [
+      {id:'trigger',kind:'trigger' as const,label:'Lead entra no fluxo',x:0,y:0},
+      {id:'email',kind:'email' as const,label:'Enviar e-mail',x:1,y:1,emailConfig:{subject:'Olá',body:'Bem-vindo'}},
+      {id:'whatsapp',kind:'whatsapp' as const,label:'Enviar WhatsApp',x:2,y:2,whatsappConfig:{message:'Oi!'}},
+      {id:'wait',kind:'wait' as const,label:'Aguardar',x:3,y:3,waitConfig:{delay:15,unit:'minutes' as const}},
+      {id:'stage',kind:'stage' as const,label:'Mover etapa',x:4,y:4,stageConfig:{stageId:'stage-1',stageName:'Qualificação'}},
+      {id:'tag',kind:'tag' as const,label:'Adicionar tag',x:5,y:5,tagName:'VIP'},
+      {id:'source-condition',kind:'condition' as const,label:'Condição',x:6,y:6,conditionConfig:{subtype:'SOURCE_EQUALS' as const,value:'Indicação'}},
+      {id:'campaign-condition',kind:'condition' as const,label:'Condição',x:7,y:7,conditionConfig:{subtype:'CAMPAIGN_EQUALS' as const,value:'Black Friday'}},
+      {id:'stage-condition',kind:'condition' as const,label:'Condição',x:8,y:8,conditionConfig:{subtype:'STAGE_EQUALS' as const,stageId:'stage-2',stageName:'Proposta'}},
+    ];
+    const graph=automationGraphFromUi(nodes,[]);
+    expect(graph.nodes.map(({id,type,subtype,config})=>({id,type,subtype,config}))).toEqual([
+      {id:'trigger',type:'trigger',subtype:'LEAD_CREATED',config:{}},
+      {id:'email',type:'action',subtype:'SEND_EMAIL',config:{subject:'Olá',body:'Bem-vindo'}},
+      {id:'whatsapp',type:'action',subtype:'SEND_WHATSAPP',config:{message:'Oi!'}},
+      {id:'wait',type:'action',subtype:'WAIT',config:{delay:15,unit:'minutes'}},
+      {id:'stage',type:'action',subtype:'MOVE_STAGE',config:{stage_id:'stage-1'}},
+      {id:'tag',type:'action',subtype:'ADD_TAG',config:{tag_name:'VIP'}},
+      {id:'source-condition',type:'condition',subtype:'SOURCE_EQUALS',config:{value:'Indicação'}},
+      {id:'campaign-condition',type:'condition',subtype:'CAMPAIGN_EQUALS',config:{value:'Black Friday'}},
+      {id:'stage-condition',type:'condition',subtype:'STAGE_EQUALS',config:{stage_id:'stage-2'}},
+    ]);
+    expect(automationGraphToUi(graph).nodes).toMatchObject(nodes.map(node=>node.kind==='stage'?{...node,stageConfig:{stageId:node.stageConfig.stageId}}:node.kind==='condition'&&node.conditionConfig.subtype==='STAGE_EQUALS'?{...node,conditionConfig:{subtype:'STAGE_EQUALS',stageId:node.conditionConfig.stageId}}:node));
   });
 });
