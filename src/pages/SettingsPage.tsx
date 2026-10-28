@@ -27,6 +27,7 @@ import {
   type AccessRole,
 } from "../lib/accessRoles";
 import { getLeadTags, saveLeadTags, type LeadTagConfig } from "../lib/leadTags";
+import {isRemoteRolePermissionAvailable,loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
 export type CompanyProfile = { name: string; tagline: string; logoUrl: string };
 export function SettingsPage({
   profile,
@@ -61,7 +62,9 @@ export function SettingsPage({
   const [leadTagsSaved, setLeadTagsSaved] = useState(false);
   const [leadTagsSaving, setLeadTagsSaving] = useState(false);
   const [leadTagsError, setLeadTagsError] = useState("");
+  const [remoteSettingsError,setRemoteSettingsError]=useState("");
   useEffect(() => setDraft(profile), [profile]);
+  useEffect(()=>{if(!authenticated)return;let active=true;Promise.all([loadRemoteCommercialSettings(),loadRemoteAccessRoles()]).then(([commercial,roles])=>{if(!active)return;setLossReasons(commercial.lossReasons);setDealActions(commercial.dealActions);if(roles.length)setAccessRoles(roles as AccessRole[])}).catch(error=>{if(active)setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível carregar as configurações remotas.')});return()=>{active=false}},[authenticated]);
   const logo = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -198,20 +201,12 @@ export function SettingsPage({
           </div>
           {settingsItems.map((item) => {
             const Icon = item.icon;
-            const unavailable =
-              authenticated && (item.id === "deals" || item.id === "access");
             return (
               <button
                 key={item.id}
                 aria-label={item.label}
                 className={activeSection === item.id ? "active" : ""}
                 aria-current={activeSection === item.id ? "page" : undefined}
-                disabled={unavailable}
-                title={
-                  unavailable
-                    ? "Configuração ainda não disponível no contrato remoto."
-                    : undefined
-                }
                 onClick={() => setActiveSection(item.id)}
               >
                 <Icon size={18} />
@@ -224,6 +219,7 @@ export function SettingsPage({
           })}
         </nav>
         <main className="settings-content">
+          {remoteSettingsError&&<p className="save-feedback error" role="alert">{remoteSettingsError}</p>}
           {activeSection === "company" && (
             <section className="surface panel-body company-settings">
               <div>
@@ -515,12 +511,7 @@ export function SettingsPage({
                 <div className="settings-actions">
                   <button
                     className="btn primary"
-                    onClick={() => {
-                      saveLossReasons(lossReasons);
-                      setLossReasons(getLossReasons());
-                      setLossReasonsSaved(true);
-                      setTimeout(() => setLossReasonsSaved(false), 2500);
-                    }}
+                    onClick={async()=>{setRemoteSettingsError('');try{if(authenticated)setLossReasons(await saveRemoteCommercialSetting('loss_reasons',lossReasons));else{saveLossReasons(lossReasons);setLossReasons(getLossReasons())}setLossReasonsSaved(true);setTimeout(()=>setLossReasonsSaved(false),2500)}catch(error){setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível salvar os motivos.')}}}
                   >
                     <Save size={16} />
                     Salvar motivos de perda
@@ -583,12 +574,7 @@ export function SettingsPage({
                 <div className="settings-actions">
                   <button
                     className="btn primary"
-                    onClick={() => {
-                      saveDealActions(dealActions);
-                      setDealActions(getDealActions());
-                      setDealActionsSaved(true);
-                      setTimeout(() => setDealActionsSaved(false), 2500);
-                    }}
+                    onClick={async()=>{setRemoteSettingsError('');try{if(authenticated)setDealActions(await saveRemoteCommercialSetting('deal_actions',dealActions));else{saveDealActions(dealActions);setDealActions(getDealActions())}setDealActionsSaved(true);setTimeout(()=>setDealActionsSaved(false),2500)}catch(error){setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível salvar as ações.')}}}
                   >
                     <Save size={16} />
                     Salvar ações
@@ -715,7 +701,7 @@ export function SettingsPage({
                     acessar.
                   </p>
                 </div>
-                <button className="btn secondary" onClick={addAccessRole}>
+                <button className="btn secondary" disabled={authenticated} onClick={addAccessRole}>
                   <Plus size={16} />
                   Nova função
                 </button>
@@ -727,15 +713,15 @@ export function SettingsPage({
                       <input
                         aria-label={`Nome da função ${role.name}`}
                         value={role.name}
-                        readOnly={role.protected}
+                        readOnly={role.protected||authenticated}
                         onChange={(event) =>
                           updateAccessRole(role.id, {
                             name: event.target.value,
                           })
                         }
                       />
-                      {role.protected ? (
-                        <span>ACESSO TOTAL</span>
+                      {role.protected||authenticated ? (
+                        <span>{role.protected?'ACESSO TOTAL':'FUNÇÃO PADRÃO'}</span>
                       ) : (
                         <button
                           aria-label={`Excluir função ${role.name}`}
@@ -761,7 +747,7 @@ export function SettingsPage({
                             type="checkbox"
                             aria-label={`${role.name}: ${label}`}
                             checked={role.permissions.includes(permission)}
-                            disabled={role.protected}
+                            disabled={role.protected||(authenticated&&!isRemoteRolePermissionAvailable(role.id,permission))}
                             onChange={() => togglePermission(role, permission)}
                           />
                           <span>{label}</span>
@@ -774,12 +760,7 @@ export function SettingsPage({
               <div className="settings-actions">
                 <button
                   className="btn primary"
-                  onClick={() => {
-                    saveAccessRoles(accessRoles);
-                    setAccessRoles(getAccessRoles());
-                    setAccessRolesSaved(true);
-                    setTimeout(() => setAccessRolesSaved(false), 2500);
-                  }}
+                  onClick={async()=>{setRemoteSettingsError('');try{if(authenticated)setAccessRoles(await saveRemoteAccessRoles(accessRoles) as AccessRole[]);else{saveAccessRoles(accessRoles);setAccessRoles(getAccessRoles())}setAccessRolesSaved(true);setTimeout(()=>setAccessRolesSaved(false),2500)}catch(error){setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível salvar os acessos.')}}}
                 >
                   <Save size={16} />
                   Salvar funções e acessos

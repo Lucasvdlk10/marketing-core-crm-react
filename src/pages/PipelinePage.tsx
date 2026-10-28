@@ -6,6 +6,7 @@ import {mockLeads,mockOpportunities,type MockLead} from '../data/mockCrmData';
 import {LeadProfileDrawer} from '../components/contacts/LeadProfileDrawer';
 import {getLossReasons} from '../lib/lossReasons';
 import {getDealActions,subscribeDealActions} from '../lib/dealActions';
+import {loadRemoteCommercialSettings} from '../lib/workspaceSettings';
 import {saveDealLossRecord} from '../lib/dealLossRecords';
 import {removeScheduledDealAction,saveScheduledDealAction} from '../lib/scheduledDealActions';
 import {getRemoteSnapshot,isRemoteMode,REMOTE_UPDATED_EVENT,remoteInsert,remoteUpdate,type RemoteContact} from '../lib/remoteCrm';
@@ -52,6 +53,7 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
   useEffect(()=>{const refresh=()=>setPipelines(getPipelines());window.addEventListener('marketing-core-pipelines-updated',refresh);window.addEventListener(REMOTE_UPDATED_EVENT,refresh);return()=>{window.removeEventListener('marketing-core-pipelines-updated',refresh);window.removeEventListener(REMOTE_UPDATED_EVENT,refresh)}},[]);
   useEffect(()=>subscribeLeadRecords(()=>setAvailableLeads(getEffectiveLeads())),[]);
   useEffect(()=>subscribeDealActions(()=>setDealActions(getDealActions())),[]);
+  useEffect(()=>{if(preview)return;loadRemoteCommercialSettings().then(()=>setDealActions(getDealActions())).catch(()=>{})},[preview]);
   const selected=pipelines.find(item=>item.id===selectedId)||pipelines[0];
   const remoteSnapshot=getRemoteSnapshot();
   const remoteDeals:Deal[]=isRemoteMode()?(remoteSnapshot?.deals.filter(item=>item.pipeline_id===selected.id).map(item=>{const lead=availableLeads.find(candidate=>candidate.id===item.contact_id);const stage=remoteSnapshot.stages.find(candidate=>candidate.id===item.stage_id);return{id:item.id,pipelineId:item.pipeline_id,leadId:item.contact_id,name:item.name,company:lead?.company||'',contact:lead?.name||'',phone:lead?.phone||'',stage:item.status==='lost'?'Perdido':stage?.name||'Sem etapa',value:Number(item.value)||0,nextAction:item.notes||'Definir próxima ação',nextActionDate:item.expected_close||undefined}})||[]):[];

@@ -34,7 +34,8 @@ describe("Settings autenticada e autorização", () => {
     expect(name).toHaveValue("Marketing Core Brasil confirmado");
   });
 
-  it("não apresenta persistência local como configuração autenticada", () => {
+  it("mantém apenas recursos sem contrato remoto desabilitados e libera as configurações persistidas", async () => {
+    const user=userEvent.setup();
     render(
       <SettingsPage
         authenticated
@@ -44,10 +45,12 @@ describe("Settings autenticada e autorização", () => {
     );
     expect(screen.getByLabelText("Alterar imagem")).toBeDisabled();
     expect(screen.getByRole("textbox", { name: "TAGLINE" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Negociações" })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Equipe e acesso" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Negociações" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Equipe e acesso" })).toBeEnabled();
+    await user.click(screen.getByRole("button",{name:"Negociações"}));
+    expect(screen.getByRole("heading",{name:"Motivos de perda"})).toBeInTheDocument();
+    await user.click(screen.getByRole("button",{name:"Equipe e acesso"}));
+    expect(screen.getByRole("heading",{name:"Funções e níveis de acesso"})).toBeInTheDocument();
   });
 
   it("usa o papel da associação real para proteger equipe e configurações", () => {
