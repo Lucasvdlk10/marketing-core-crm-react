@@ -14,6 +14,7 @@ describe('ProfilePage',()=>{
   beforeEach(()=>{
     rpc.mockReset();signIn.mockReset();updatePassword.mockReset();
     getSession.mockReturnValue({user:{email:'employee@example.com'}});
+    vi.stubGlobal('createImageBitmap',vi.fn().mockResolvedValue({width:512,height:512,close:vi.fn()}));
     rpc.mockImplementation(async(name:string)=>name==='core_my_profile_get'?{
       user_id:'user-1',full_name:'Pessoa Remota',phone:'31999990000',job_title:'SDR',avatar_data:null,updated_at:'2026-10-28T00:00:00Z'
     }:{});
@@ -42,6 +43,15 @@ describe('ProfilePage',()=>{
     const file=new File(['avatar'],'avatar.png',{type:'image/png'});
     await user.upload(screen.getByLabelText('Foto de perfil'),file);
     await waitFor(()=>expect(screen.getByRole('img',{name:'Prévia da foto de perfil'})).toHaveAttribute('src',expect.stringMatching(/^data:image\/png;base64,/)));
+  });
+
+  it('shows discreet avatar requirements and translates the database size error',async()=>{
+    rpc.mockImplementation(async(name:string)=>name==='core_my_profile_get'?{user_id:'user-1',full_name:'Pessoa Remota',phone:null,job_title:null,avatar_data:null,updated_at:null}:Promise.reject(new Error('new row violates check constraint core_user_profiles_avatar_data_size')));
+    const user=userEvent.setup();render(<ProfilePage/>);await screen.findByLabelText('Nome completo');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('JPG, PNG ou WebP');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('2048×2048');
+    await user.click(screen.getByRole('button',{name:'Salvar perfil'}));
+    expect(screen.getByRole('alert')).toHaveTextContent('A foto ficou maior que o limite permitido');
   });
 
   it('reauthenticates with the current password before changing it',async()=>{
