@@ -24,10 +24,11 @@ import {
   restoreRemoteSnapshot,
   updateRemoteWorkspaceName,
 } from "./lib/remoteCrm";
-import { canManageSettings, canManageTeam } from "./lib/authorization";
+
 import { startIdleSession } from "./lib/idleLogout";
 import { recordSessionAudit } from "./lib/sessionAudit";
 import { IdlePresencePrompt } from "./components/common/IdlePresencePrompt";
+import {visibleNavigationModules} from './lib/navigationAccess';
 export function App() {
   const [session, setSession] = useState<Session | null>(
     () => crmApi?.loadSession() ?? null,
@@ -62,8 +63,10 @@ export function App() {
       (session?.user as any)?.role ||
       "",
   ).toLowerCase();
-  const canManageTeamRoute = previewMode || canManageTeam(rawRole);
-  const canManageSettingsRoute = previewMode || canManageSettings(rawRole);
+  const snapshot=getRemoteSnapshot();
+  const visibleModules=visibleNavigationModules(previewMode?'owner':rawRole,snapshot?.rolePermissions||[]);
+  const canManageTeamRoute = visibleModules.has('team');
+  const canManageSettingsRoute = visibleModules.has('settings');
   const accessRole: "admin" | "employee" =
     canManageTeamRoute && canManageSettingsRoute ? "admin" : "employee";
   const currentUser = previewMode
@@ -176,7 +179,9 @@ export function App() {
         onLogin={async (e, p) => {
           if (!crmApi) throw Error("Staging não configurado");
           try {
-            setSession(await crmApi.signIn(e, p));
+            const authenticated=await crmApi.signIn(e, p);
+            window.location.hash='#/dashboard';
+            setSession(authenticated);
             setError("");
           } catch (x) {
             setError(
@@ -236,6 +241,7 @@ export function App() {
       <AppShell
         workspace={company}
         role={accessRole}
+        visibleModules={visibleModules}
         userName={currentUser}
         onLogout={() => {
           recordSessionAudit(currentUser, "logout_manual");
@@ -249,24 +255,21 @@ export function App() {
             path="/dashboard"
             element={<DashboardPage preview={previewMode} />}
           />
-          <Route
-            path="/contacts"
-            element={<ContactsPage preview={previewMode} />}
-          />
+          <Route path="/contacts" element={visibleModules.has('contacts')?<ContactsPage preview={previewMode}/>:<Navigate to="/dashboard" replace/>}/>
           <Route
             path="/pipeline"
-            element={<PipelinePage preview={previewMode} />}
+            element={visibleModules.has('pipeline')?<PipelinePage preview={previewMode} />:<Navigate to="/dashboard" replace/>}
           />
-          <Route path="/tasks" element={<TasksPage preview={previewMode} />} />
+          <Route path="/tasks" element={visibleModules.has('tasks')?<TasksPage preview={previewMode} />:<Navigate to="/dashboard" replace/>} />
           <Route
             path="/calendar"
-            element={<CalendarPage preview={previewMode} />}
+            element={visibleModules.has('calendar')?<CalendarPage preview={previewMode} />:<Navigate to="/dashboard" replace/>}
           />
-          <Route path="/campaigns" element={<CampaignsPage />} />
-          <Route path="/segments" element={<SegmentsPage />} />
-          <Route path="/automations" element={<AutomationsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/integrations" element={<IntegrationsPage />} />
+          <Route path="/campaigns" element={visibleModules.has('campaigns')?<CampaignsPage />:<Navigate to="/dashboard" replace/>} />
+          <Route path="/segments" element={visibleModules.has('segments')?<SegmentsPage />:<Navigate to="/dashboard" replace/>} />
+          <Route path="/automations" element={visibleModules.has('automations')?<AutomationsPage />:<Navigate to="/dashboard" replace/>} />
+          <Route path="/reports" element={visibleModules.has('reports')?<ReportsPage />:<Navigate to="/dashboard" replace/>} />
+          <Route path="/integrations" element={visibleModules.has('integrations')?<IntegrationsPage />:<Navigate to="/dashboard" replace/>} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route
             path="/team"

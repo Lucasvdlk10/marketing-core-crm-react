@@ -47,6 +47,7 @@ const groups = [
     ],
   ],
 ] as const;
+export type SidebarModule=(typeof groups)[number][1][number][0];
 export type WorkspaceIdentity = {
   name: string;
   tagline: string;
@@ -55,9 +56,11 @@ export type WorkspaceIdentity = {
 export function Sidebar({
   workspace,
   role,
+  visibleModules,
 }: {
   workspace: WorkspaceIdentity;
   role: "admin" | "employee";
+  visibleModules?:ReadonlySet<string>;
 }) {
   return (
     <aside className="sidebar">
@@ -80,8 +83,7 @@ export function Sidebar({
       {groups.map(([group, items]) => {
         const visible = items.filter(
           ([id]) =>
-            !(["team", "settings"] as string[]).includes(id) ||
-            role === "admin",
+            (visibleModules?visibleModules.has(id):(!(["team", "settings"] as string[]).includes(id)||role==="admin")),
         );
         return visible.length ? (
           <div key={group}>

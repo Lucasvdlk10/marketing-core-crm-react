@@ -136,6 +136,7 @@ export type RemoteAutomation = {
   active_revision_id: string | null;
   updated_at: string;
 };
+export type RemoteRolePermission={role:string;permission:string;enabled:boolean};
 export type RemoteSnapshot = {
   workspace: RemoteWorkspace;
   membership: RemoteMember;
@@ -152,6 +153,7 @@ export type RemoteSnapshot = {
   segmentLists: RemoteSegmentList[];
   segmentMembers: RemoteSegmentMember[];
   automations: RemoteAutomation[];
+  rolePermissions:RemoteRolePermission[];
   summary: Record<string, unknown> | null;
 };
 
@@ -250,6 +252,7 @@ export async function bootstrapRemoteCrm(
     segmentLists,
     segmentMembers,
     automations,
+    rolePermissions,
     summary,
   ] = await Promise.all([
     select<RemoteContact>(
@@ -302,6 +305,7 @@ export async function bootstrapRemoteCrm(
     canReadAutomations
       ? crmApi.rpc("core_automation_list", { p_workspace: w }) as Promise<RemoteAutomation[]>
       : Promise.resolve([] as RemoteAutomation[]),
+    select<RemoteRolePermission>("core_role_permissions",`select=role,permission,enabled&workspace_id=eq.${encode(w)}&role=eq.${encode(membership.role)}`),
     crmApi.rpc("core_dashboard_summary", { p_workspace: w }) as Promise<Record<
       string,
       unknown
@@ -323,6 +327,7 @@ export async function bootstrapRemoteCrm(
     segmentLists,
     segmentMembers,
     automations,
+    rolePermissions,
     summary,
   });
 }

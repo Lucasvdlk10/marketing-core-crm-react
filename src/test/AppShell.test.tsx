@@ -19,6 +19,15 @@ describe('AppShell', () => {
     expect(screen.queryByTestId('nav-team')).not.toBeInTheDocument();
   });
 
+  it('oculta módulos que foram retirados das permissões do usuário',()=>{
+    render(<MemoryRouter><AppShell role="employee" visibleModules={new Set(['dashboard','contacts','tasks'])} workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="SDR"><div>conteúdo</div></AppShell></MemoryRouter>);
+    expect(screen.getByTestId('nav-dashboard')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-contacts')).toBeInTheDocument();
+    expect(screen.queryByTestId('nav-automations')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-integrations')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-settings')).not.toBeInTheDocument();
+  });
+
   it('abre a janela de notificações abaixo do sino',async()=>{
     const user=userEvent.setup();
     render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
