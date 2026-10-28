@@ -12,6 +12,7 @@ import { DataTable } from "../components/common/DataTable";
 import { LeadProfileDrawer } from "../components/contacts/LeadProfileDrawer";
 import { LeadImportPage } from "../components/contacts/LeadImportPage";
 import {PhoneInput,phoneIdentity} from "../components/common/PhoneInput";
+import {getLeadSources} from "../lib/leadSources";
 import { type MockLead } from "../data/mockCrmData";
 import {
   createLeadRecord,
@@ -144,6 +145,7 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
   const sources = Array.from(
     new Set(allLeads.map((item) => item.source).filter(Boolean)),
   ).sort();
+  const configuredSources=getLeadSources();
   const pages = Array.from(
     { length: totalPages },
     (_, index) => index + 1,
@@ -654,14 +656,7 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
                   <option value="" disabled>
                     Selecione a origem
                   </option>
-                  <option>Indicação</option>
-                  <option>Landing page</option>
-                  <option>Google Ads</option>
-                  <option>Instagram</option>
-                  <option>LinkedIn</option>
-                  <option>Evento</option>
-                  <option>Site institucional</option>
-                  <option>Outro</option>
+                  {configuredSources.map(source=><option key={source}>{source}</option>)}
                 </select>
               </label>
               <label>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Building2,
+  ContactRound,
   Columns3,
   Handshake,
   ImagePlus,
@@ -27,6 +28,7 @@ import {
   type AccessRole,
 } from "../lib/accessRoles";
 import { getLeadTags, saveLeadTags, type LeadTagConfig } from "../lib/leadTags";
+import {getLeadSources,saveLeadSources} from "../lib/leadSources";
 import {isRemoteRolePermissionAvailable,loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
 import {crmApi} from "../lib/api";
 export type CompanyProfile = { name: string; tagline: string; logoUrl: string };
@@ -63,15 +65,19 @@ export function SettingsPage({
   const [accessRoles, setAccessRoles] = useState<AccessRole[]>(getAccessRoles);
   const [accessRolesSaved, setAccessRolesSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "company" | "pipeline" | "deals" | "tags" | "access"
+    "company" | "pipeline" | "deals" | "leads" | "tags" | "access"
   >("company");
   const [leadTags, setLeadTags] = useState<LeadTagConfig[]>(getLeadTags);
   const [leadTagsSaved, setLeadTagsSaved] = useState(false);
   const [leadTagsSaving, setLeadTagsSaving] = useState(false);
   const [leadTagsError, setLeadTagsError] = useState("");
+  const [leadSources,setLeadSources]=useState<string[]>(getLeadSources);
+  const [leadSourcesSaving,setLeadSourcesSaving]=useState(false);
+  const [leadSourcesSaved,setLeadSourcesSaved]=useState(false);
+  const [leadSourcesError,setLeadSourcesError]=useState("");
   const [remoteSettingsError,setRemoteSettingsError]=useState("");
   useEffect(() => setDraft(profile), [profile]);
-  useEffect(()=>{if(!authenticated)return;let active=true;Promise.all([loadRemoteCommercialSettings(),loadRemoteAccessRoles()]).then(([commercial,roles])=>{if(!active)return;setLossReasons(commercial.lossReasons);setDealActions(commercial.dealActions);if(roles.length)setAccessRoles(roles as AccessRole[])}).catch(error=>{if(active)setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível carregar as configurações remotas.')});return()=>{active=false}},[authenticated]);
+  useEffect(()=>{if(!authenticated)return;let active=true;Promise.all([loadRemoteCommercialSettings(),loadRemoteAccessRoles()]).then(([commercial,roles])=>{if(!active)return;setLossReasons(commercial.lossReasons);setDealActions(commercial.dealActions);setLeadSources(commercial.leadSources||getLeadSources());if(roles.length)setAccessRoles(roles as AccessRole[])}).catch(error=>{if(active)setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível carregar as configurações remotas.')});return()=>{active=false}},[authenticated]);
   const changePassword=async(event:FormEvent)=>{event.preventDefault();setPasswordFeedback("");setPasswordError("");if(newPassword!==confirmPassword){setPasswordError("As novas senhas não coincidem.");return}if(newPassword.length<8){setPasswordError("A nova senha deve ter pelo menos 8 caracteres.");return}if(!crmApi){setPasswordError("Supabase não configurado.");return}const email=String(crmApi.getSession()?.user?.email||"");if(!email){setPasswordError("Não foi possível identificar o e-mail da conta.");return}setPasswordSaving(true);try{await crmApi.signIn(email,currentPassword);await crmApi.updatePassword(newPassword);setCurrentPassword("");setNewPassword("");setConfirmPassword("");setPasswordFeedback("Senha alterada com sucesso.")}catch(error){const message=error instanceof Error?error.message:"Não foi possível alterar a senha.";setPasswordError(/invalid login credentials/i.test(message)?"Senha atual incorreta.":message)}finally{setPasswordSaving(false)}};
   const logo = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -178,6 +184,12 @@ export function SettingsPage({
       label: "Negociações",
       description: "Perdas e próximas ações",
       icon: Handshake,
+    },
+    {
+      id: "leads" as const,
+      label: "Leads",
+      description: "Origens de aquisição",
+      icon: ContactRound,
     },
     {
       id: "tags" as const,
@@ -602,6 +614,22 @@ export function SettingsPage({
                 </div>
               </section>
             </div>
+          )}
+          {activeSection === "leads" && (
+            <section className="surface panel-body lead-sources-settings">
+              <div className="settings-section-head">
+                <div><h2>Origens dos leads</h2><p>Personalize as opções disponíveis ao cadastrar um lead ou uma negociação.</p></div>
+                <button className="btn secondary" onClick={()=>setLeadSources(current=>[...current,"Nova origem"])}><Plus size={16}/>Adicionar origem</button>
+              </div>
+              <div className="reason-settings-list">
+                {leadSources.map((source,index)=><div className="reason-setting-row" key={index}><input aria-label={`Origem ${index+1}`} value={source} onChange={event=>setLeadSources(current=>current.map((item,itemIndex)=>itemIndex===index?event.target.value:item))}/><button aria-label={`Excluir origem ${source}`} disabled={leadSources.length===1} onClick={()=>setLeadSources(current=>current.filter((_,itemIndex)=>itemIndex!==index))}><Trash2 size={15}/></button></div>)}
+              </div>
+              <div className="settings-actions">
+                <button className="btn primary" disabled={leadSourcesSaving} onClick={async()=>{setLeadSourcesSaving(true);setLeadSourcesSaved(false);setLeadSourcesError("");try{const persisted=authenticated?await saveRemoteCommercialSetting('lead_sources',leadSources):saveLeadSources(leadSources);setLeadSources(persisted);setLeadSourcesSaved(true);setTimeout(()=>setLeadSourcesSaved(false),2500)}catch(error){setLeadSourcesError(error instanceof Error?error.message:"Não foi possível salvar as origens.")}finally{setLeadSourcesSaving(false)}}}><Save size={16}/>{leadSourcesSaving?"Salvando...":"Salvar origens"}</button>
+                {leadSourcesSaved&&<span className="save-feedback" role="status">Origens salvas com sucesso</span>}
+                {leadSourcesError&&<span className="save-feedback error" role="alert">{leadSourcesError}</span>}
+              </div>
+            </section>
           )}
           {activeSection === "tags" && (
             <section className="surface panel-body lead-tags-settings">

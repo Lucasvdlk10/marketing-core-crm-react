@@ -5,6 +5,7 @@ import {getPipelines,type PipelineConfig} from '../lib/pipelines';
 import {mockLeads,mockOpportunities,type MockLead} from '../data/mockCrmData';
 import {LeadProfileDrawer} from '../components/contacts/LeadProfileDrawer';
 import {PhoneInput,phoneIdentity} from '../components/common/PhoneInput';
+import {getLeadSources} from '../lib/leadSources';
 import {getLossReasons} from '../lib/lossReasons';
 import {getDealActions,subscribeDealActions} from '../lib/dealActions';
 import {loadRemoteCommercialSettings} from '../lib/workspaceSettings';
@@ -14,7 +15,7 @@ import {getRemoteSnapshot,isRemoteMode,REMOTE_UPDATED_EVENT,remoteInsert,remoteU
 import {createLeadRecord,getAllLeadTags,getEffectiveLeads,getLeadRecord,isLeadDeleted,saveLeadRecord,subscribeLeadRecords} from '../lib/leadRecords';
 
 type Deal={id:string;pipelineId:string;leadId:string;name:string;company:string;contact:string;phone:string;stage:string;value:number;nextAction:string;nextActionDate?:string;lossReason?:string;lossNotes?:string;result?:'open'|'won'|'lost'};
-type DealDraft={name:string;contact:string;phone:string;email:string;company:string;value:string;stage:string;nextAction:string;nextActionDate:string};
+type DealDraft={name:string;contact:string;phone:string;email:string;company:string;source:string;value:string;stage:string;nextAction:string;nextActionDate:string};
 type SegmentListFilters={tag:string;status:string;source:string;company:string;dateFrom:string;dateTo:string;hasEmail:''|'yes'|'no';stage:string};
 type StoredSegmentList={id?:string;name:string;filters?:SegmentListFilters;leadIds?:string[]};
 type PipelineFilters={outcome:''|'won'|'lost';tag:string;source:string;campaign:string;dateFrom:string;dateTo:string;segment:string};
@@ -52,7 +53,8 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
   const[linkedLead,setLinkedLead]=useState<MockLead|null>(null);
   const[availableLeads,setAvailableLeads]=useState<MockLead[]>(getEffectiveLeads);
   const leadTags=getAllLeadTags();
-  const[draft,setDraft]=useState<DealDraft>({name:'',contact:'',phone:'',email:'',company:'',value:'',stage:'',nextAction:'',nextActionDate:''});
+  const leadSources=getLeadSources();
+  const[draft,setDraft]=useState<DealDraft>({name:'',contact:'',phone:'',email:'',company:'',source:'',value:'',stage:'',nextAction:'',nextActionDate:''});
   useEffect(()=>{const refresh=()=>setPipelines(getPipelines());window.addEventListener('marketing-core-pipelines-updated',refresh);window.addEventListener(REMOTE_UPDATED_EVENT,refresh);return()=>{window.removeEventListener('marketing-core-pipelines-updated',refresh);window.removeEventListener(REMOTE_UPDATED_EVENT,refresh)}},[]);
   useEffect(()=>subscribeLeadRecords(()=>setAvailableLeads(getEffectiveLeads())),[]);
   useEffect(()=>subscribeDealActions(()=>setDealActions(getDealActions())),[]);
@@ -71,9 +73,9 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
   const total=stages.reduce((sum,stage)=>sum+stage.items.length,0);
   const activeFilterCount=Object.values(filters).filter(Boolean).length;
   const phoneMatch=useMemo(()=>{const phone=normalizePhone(draft.phone);const email=draft.email.trim().toLowerCase();return availableLeads.find(lead=>(phone.length>=8&&normalizePhone(lead.phone)===phone)||(email&&lead.email.trim().toLowerCase()===email))||null},[draft.phone,draft.email,availableLeads]);
-  const openModal=()=>{setLinkedLead(null);setDealCreateError('');setDraft({name:'',contact:'',phone:'',email:'',company:'',value:'',stage:selected.stages[0]?.name||'',nextAction:'',nextActionDate:''});setModalOpen(true)};
+  const openModal=()=>{setLinkedLead(null);setDealCreateError('');setDraft({name:'',contact:'',phone:'',email:'',company:'',source:leadSources[0]||'',value:'',stage:selected.stages[0]?.name||'',nextAction:'',nextActionDate:''});setModalOpen(true)};
   const updatePhone=(phone:string)=>{setDraft(current=>({...current,phone}));if(linkedLead&&normalizePhone(linkedLead.phone)!==normalizePhone(phone))setLinkedLead(null)};
-  const linkLead=(lead:MockLead)=>{setLinkedLead(lead);setDraft(current=>({...current,contact:lead.name,phone:lead.phone,email:lead.email,company:lead.company||current.company}))};
+  const linkLead=(lead:MockLead)=>{setLinkedLead(lead);setDraft(current=>({...current,contact:lead.name,phone:lead.phone,email:lead.email,company:lead.company||current.company,source:lead.source}))};
   const createDeal=async(event:FormEvent)=>{
     event.preventDefault();
     if(phoneMatch&&!linkedLead){setDealCreateError('Vincule o lead encontrado antes de criar a negociação.');return}
@@ -81,7 +83,7 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
     let lead=linkedLead;
     try{
       if(!lead){
-        const localLead:MockLead={id:`lead-deal-${Date.now()}`,name:draft.contact.trim(),phone:draft.phone.trim(),email:draft.email.trim(),company:draft.company.trim(),source:'Negociação criada manualmente',status:'Oportunidade',createdAt:new Date().toLocaleDateString('pt-BR')};
+        const localLead:MockLead={id:`lead-deal-${Date.now()}`,name:draft.contact.trim(),phone:draft.phone.trim(),email:draft.email.trim(),company:draft.company.trim(),source:draft.source,status:'Oportunidade',createdAt:new Date().toLocaleDateString('pt-BR')};
         if(isRemoteMode()){const created=await remoteInsert<RemoteContact>('core_contacts',{name:localLead.name,phone:localLead.phone,email:localLead.email||null,company:localLead.company||null,source:localLead.source,status:'qualified'});lead={...localLead,id:created.id}}
         else{await createLeadRecord(localLead);lead=localLead}
       }else if(!lead.company&&draft.company.trim()){
@@ -129,7 +131,8 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
       <label className="field"><span>E-mail (opcional)</span><input aria-label="E-mail do contato" type="email" readOnly={Boolean(linkedLead)} value={draft.email} onChange={event=>setDraft({...draft,email:event.target.value})} placeholder="contato@empresa.com.br"/></label>
       {phoneMatch&&!linkedLead&&<div className="lead-match-card"><span><Link2 size={17}/></span><div><strong>Lead encontrado</strong><small>{phoneMatch.name} · {phoneMatch.company}</small></div><button type="button" aria-label={`Vincular ${phoneMatch.name}`} onClick={()=>linkLead(phoneMatch)}>Vincular lead</button></div>}
       {linkedLead&&<div className="linked-lead-card"><div><strong>Negociação vinculada a {linkedLead.name}</strong><span>Nome, telefone e e-mail usam os dados do lead. Se a empresa estiver vazia, ela será atualizada ao salvar.</span></div><button type="button" onClick={()=>setLinkedLead(null)}>Desvincular</button></div>}
-      <label className="field"><span>Empresa</span><input readOnly={Boolean(linkedLead?.company)} value={draft.company} onChange={event=>setDraft({...draft,company:event.target.value})}/></label>
+      <label className="field"><span>Empresa</span><input aria-label="Empresa da negociação" readOnly={Boolean(linkedLead?.company)} value={draft.company} onChange={event=>setDraft({...draft,company:event.target.value})}/></label>
+      <label className="field"><span>Origem do lead</span><select aria-label="Origem do lead na negociação" required disabled={Boolean(linkedLead)} value={draft.source} onChange={event=>setDraft({...draft,source:event.target.value})}>{leadSources.map(source=><option key={source}>{source}</option>)}</select></label>
       <label className="field"><span>Valor da negociação</span><input aria-label="Valor da negociação" type="number" min="0" step="0.01" value={draft.value} onChange={event=>setDraft({...draft,value:event.target.value})}/></label>
       <label className="field"><span>Etapa inicial</span><select value={draft.stage} onChange={event=>setDraft({...draft,stage:event.target.value})}>{selected.stages.map(stage=><option key={stage.id} value={stage.name}>{stage.name}</option>)}</select></label>
       <label className="field"><span>Próxima ação</span><select aria-label="Próxima ação inicial" value={draft.nextAction} onChange={event=>setDraft({...draft,nextAction:event.target.value})}><option value="">Definir depois</option>{dealActions.map(action=><option key={action} value={action}>{action}</option>)}</select></label><label className="field"><span>Data da próxima ação</span><input aria-label="Data da próxima ação na criação" type="date" value={draft.nextActionDate} onChange={event=>setDraft({...draft,nextActionDate:event.target.value})}/></label></div>{dealCreateError&&<div className="import-error deal-create-error" role="alert">{dealCreateError}</div>}</div><footer>{phoneMatch&&!linkedLead?<span className="deal-link-required">Já existe um lead com este telefone ou e-mail. Vincule-o para evitar duplicidade.</span>:normalizePhone(draft.phone).length>=8&&!linkedLead?<span className="deal-new-lead-note">Novo contato: um lead será criado automaticamente.</span>:null}<button type="button" className="btn secondary" onClick={()=>setModalOpen(false)}>Cancelar</button><button type="submit" className="btn primary" disabled={dealCreating||Boolean(phoneMatch&&!linkedLead)}>{dealCreating?'Criando…':'Criar negociação'}</button></footer></form></div>}

@@ -2,32 +2,36 @@ import {crmApi} from './api';
 import {getRemoteWorkspaceId} from './remoteCrm';
 import {defaultDealActions,setRemoteDealActions} from './dealActions';
 import {defaultLossReasons,setRemoteLossReasons} from './lossReasons';
+import {defaultLeadSources,setRemoteLeadSources} from './leadSources';
 
 const clean=(value:unknown,fallback:string[])=>Array.isArray(value)?value.map(String).map(item=>item.trim()).filter(Boolean):fallback;
 
 export async function loadRemoteCommercialSettings(){
-  if(!crmApi)return{lossReasons:defaultLossReasons,dealActions:defaultDealActions};
+  if(!crmApi)return{lossReasons:defaultLossReasons,dealActions:defaultDealActions,leadSources:defaultLeadSources};
   const w=getRemoteWorkspaceId();
-  if(!w)return{lossReasons:defaultLossReasons,dealActions:defaultDealActions};
-  const[lossValue,actionValue]=await Promise.all([
+  if(!w)return{lossReasons:defaultLossReasons,dealActions:defaultDealActions,leadSources:defaultLeadSources};
+  const[lossValue,actionValue,sourceValue]=await Promise.all([
     crmApi.rpc('core_workspace_setting_read',{w,p_key:'loss_reasons'}),
     crmApi.rpc('core_workspace_setting_read',{w,p_key:'deal_actions'}),
+    crmApi.rpc('core_workspace_setting_read',{w,p_key:'lead_sources'}),
   ]);
   const lossReasons=clean(lossValue,defaultLossReasons);
   const dealActions=clean(actionValue,defaultDealActions);
+  const leadSources=clean(sourceValue,defaultLeadSources);
   setRemoteLossReasons(lossReasons);
   setRemoteDealActions(dealActions);
-  return{lossReasons,dealActions};
+  setRemoteLeadSources(leadSources);
+  return{lossReasons,dealActions,leadSources};
 }
 
-export async function saveRemoteCommercialSetting(key:'loss_reasons'|'deal_actions',values:string[]){
+export async function saveRemoteCommercialSetting(key:'loss_reasons'|'deal_actions'|'lead_sources',values:string[]){
   if(!crmApi)throw Error('Supabase não configurado.');
   const w=getRemoteWorkspaceId();
   if(!w)throw Error('Workspace ativo não encontrado.');
   const cleanValues=clean(values,[]);
   if(!cleanValues.length)throw Error('Mantenha pelo menos uma opção.');
   const persisted=clean(await crmApi.rpc('core_workspace_setting_write',{w,p_key:key,p_value:cleanValues}),cleanValues);
-  if(key==='loss_reasons')setRemoteLossReasons(persisted);else setRemoteDealActions(persisted);
+  if(key==='loss_reasons')setRemoteLossReasons(persisted);else if(key==='deal_actions')setRemoteDealActions(persisted);else setRemoteLeadSources(persisted);
   return persisted;
 }
 
