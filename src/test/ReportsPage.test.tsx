@@ -11,6 +11,9 @@ describe('ReportsPage',()=>{
   it('abre na visão executiva e permite alternar para presença',async()=>{
     const user=userEvent.setup();render(<ReportsPage/>);
     expect(screen.getByRole('heading',{name:'Relatórios executivos'})).toBeInTheDocument();
+    expect(document.querySelector('.report-tabs')).toBeInTheDocument();
+    expect(document.querySelectorAll('.executive-metrics article')).toHaveLength(4);
+    expect(document.querySelector('.executive-report-grid')).toBeInTheDocument();
     expect(screen.getByText('Distribuição do funil')).toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:'Presença da equipe'}));
     expect(screen.getByRole('heading',{name:'Relatório de presença'})).toBeInTheDocument();
