@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Building2,
   Columns3,
@@ -28,6 +28,7 @@ import {
 } from "../lib/accessRoles";
 import { getLeadTags, saveLeadTags, type LeadTagConfig } from "../lib/leadTags";
 import {isRemoteRolePermissionAvailable,loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
+import {crmApi} from "../lib/api";
 export type CompanyProfile = { name: string; tagline: string; logoUrl: string };
 export function SettingsPage({
   profile,
@@ -43,6 +44,12 @@ export function SettingsPage({
   const [draft, setDraft] = useState(profile);
   const [saved, setSaved] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [currentPassword,setCurrentPassword]=useState("");
+  const [newPassword,setNewPassword]=useState("");
+  const [confirmPassword,setConfirmPassword]=useState("");
+  const [passwordSaving,setPasswordSaving]=useState(false);
+  const [passwordFeedback,setPasswordFeedback]=useState("");
+  const [passwordError,setPasswordError]=useState("");
   const [profileError, setProfileError] = useState("");
   const [pipelineSaved, setPipelineSaved] = useState(false);
   const [pipelineSaving, setPipelineSaving] = useState(false);
@@ -65,6 +72,7 @@ export function SettingsPage({
   const [remoteSettingsError,setRemoteSettingsError]=useState("");
   useEffect(() => setDraft(profile), [profile]);
   useEffect(()=>{if(!authenticated)return;let active=true;Promise.all([loadRemoteCommercialSettings(),loadRemoteAccessRoles()]).then(([commercial,roles])=>{if(!active)return;setLossReasons(commercial.lossReasons);setDealActions(commercial.dealActions);if(roles.length)setAccessRoles(roles as AccessRole[])}).catch(error=>{if(active)setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível carregar as configurações remotas.')});return()=>{active=false}},[authenticated]);
+  const changePassword=async(event:FormEvent)=>{event.preventDefault();setPasswordFeedback("");setPasswordError("");if(newPassword!==confirmPassword){setPasswordError("As novas senhas não coincidem.");return}if(newPassword.length<8){setPasswordError("A nova senha deve ter pelo menos 8 caracteres.");return}if(!crmApi){setPasswordError("Supabase não configurado.");return}const email=String(crmApi.getSession()?.user?.email||"");if(!email){setPasswordError("Não foi possível identificar o e-mail da conta.");return}setPasswordSaving(true);try{await crmApi.signIn(email,currentPassword);await crmApi.updatePassword(newPassword);setCurrentPassword("");setNewPassword("");setConfirmPassword("");setPasswordFeedback("Senha alterada com sucesso.")}catch(error){const message=error instanceof Error?error.message:"Não foi possível alterar a senha.";setPasswordError(/invalid login credentials/i.test(message)?"Senha atual incorreta.":message)}finally{setPasswordSaving(false)}};
   const logo = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -309,6 +317,15 @@ export function SettingsPage({
                   </span>
                 )}
               </div>
+              {authenticated&&<form className="account-security-card" onSubmit={changePassword}>
+                <div className="settings-section-head"><div><h3><ShieldCheck size={18}/> Segurança da conta</h3><p>Confirme a senha atual antes de definir uma nova senha no Supabase.</p></div></div>
+                <div className="form-grid">
+                  <label className="field full"><span>SENHA ATUAL</span><input aria-label="Senha atual" autoComplete="current-password" type="password" required value={currentPassword} onChange={event=>setCurrentPassword(event.target.value)}/></label>
+                  <label className="field"><span>NOVA SENHA</span><input aria-label="Nova senha" autoComplete="new-password" type="password" minLength={8} required value={newPassword} onChange={event=>setNewPassword(event.target.value)}/></label>
+                  <label className="field"><span>CONFIRMAR NOVA SENHA</span><input aria-label="Confirmar nova senha" autoComplete="new-password" type="password" minLength={8} required value={confirmPassword} onChange={event=>setConfirmPassword(event.target.value)}/></label>
+                </div>
+                <div className="settings-actions"><button className="btn primary" disabled={passwordSaving} type="submit"><ShieldCheck size={16}/>{passwordSaving?"Alterando...":"Alterar senha"}</button>{passwordFeedback&&<span className="save-feedback" role="status">{passwordFeedback}</span>}{passwordError&&<span className="save-feedback error" role="alert">{passwordError}</span>}</div>
+              </form>}
             </section>
           )}
           {activeSection === "pipeline" && (
