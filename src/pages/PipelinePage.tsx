@@ -4,6 +4,7 @@ import {PageHeader,EmptyState} from '../components/common/PageHeader';
 import {getPipelines,type PipelineConfig} from '../lib/pipelines';
 import {mockLeads,mockOpportunities,type MockLead} from '../data/mockCrmData';
 import {LeadProfileDrawer} from '../components/contacts/LeadProfileDrawer';
+import {PhoneInput,phoneIdentity} from '../components/common/PhoneInput';
 import {getLossReasons} from '../lib/lossReasons';
 import {getDealActions,subscribeDealActions} from '../lib/dealActions';
 import {loadRemoteCommercialSettings} from '../lib/workspaceSettings';
@@ -22,7 +23,7 @@ const campaignFor=(lead:MockLead)=>lead.source==='Google Ads'?'Campanha Google A
 const leadDate=(value:string)=>{const[day,month,year]=value.split('/').map(Number);return new Date(year,month-1,day).getTime()};
 const brl=(value:number)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(value);
 const colors=['#11B8CB','#94A3B8','#8B67D7','#F0A245','#20A579','#EB5C70'];
-const normalizePhone=(value:string)=>value.replace(/\D/g,'');
+const normalizePhone=phoneIdentity;
 
 export function PipelinePage({preview=false}:{preview?:boolean}){
   const[pipelines,setPipelines]=useState<PipelineConfig[]>(getPipelines);
@@ -124,7 +125,7 @@ export function PipelinePage({preview=false}:{preview?:boolean}){
     {modalOpen&&<div className="modal-backdrop" role="presentation"><form className="deal-create-modal" role="dialog" aria-modal="true" aria-label="Registrar nova negociação" onSubmit={createDeal}><header><div><h2>Nova negociação</h2><p>Digite o telefone para localizar um lead existente. Se não houver correspondência, um novo lead será criado junto com a negociação.</p></div><button type="button" aria-label="Fechar" onClick={()=>setModalOpen(false)}><X size={18}/></button></header><div className="deal-form-body"><div className="form-grid">
       <label className="field full"><span>Nome da negociação</span><input aria-label="Nome da negociação" autoFocus required placeholder="Ex.: Contrato de suporte anual" value={draft.name} onChange={event=>setDraft({...draft,name:event.target.value})}/></label>
       <label className="field"><span>Nome do contato</span><input aria-label="Nome do contato" required readOnly={Boolean(linkedLead)} value={draft.contact} onChange={event=>setDraft({...draft,contact:event.target.value})}/></label>
-      <label className="field"><span>Telefone</span><input aria-label="Telefone" required value={draft.phone} onChange={event=>updatePhone(event.target.value)} placeholder="(31) 99999-9999"/></label>
+      <div className="field phone-field"><span>Telefone</span><PhoneInput required value={draft.phone} onChange={updatePhone}/></div>
       <label className="field"><span>E-mail (opcional)</span><input aria-label="E-mail do contato" type="email" readOnly={Boolean(linkedLead)} value={draft.email} onChange={event=>setDraft({...draft,email:event.target.value})} placeholder="contato@empresa.com.br"/></label>
       {phoneMatch&&!linkedLead&&<div className="lead-match-card"><span><Link2 size={17}/></span><div><strong>Lead encontrado</strong><small>{phoneMatch.name} · {phoneMatch.company}</small></div><button type="button" aria-label={`Vincular ${phoneMatch.name}`} onClick={()=>linkLead(phoneMatch)}>Vincular lead</button></div>}
       {linkedLead&&<div className="linked-lead-card"><div><strong>Negociação vinculada a {linkedLead.name}</strong><span>Nome, telefone e e-mail usam os dados do lead. Se a empresa estiver vazia, ela será atualizada ao salvar.</span></div><button type="button" onClick={()=>setLinkedLead(null)}>Desvincular</button></div>}

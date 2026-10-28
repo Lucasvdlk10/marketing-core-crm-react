@@ -11,6 +11,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { DataTable } from "../components/common/DataTable";
 import { LeadProfileDrawer } from "../components/contacts/LeadProfileDrawer";
 import { LeadImportPage } from "../components/contacts/LeadImportPage";
+import {PhoneInput,phoneIdentity} from "../components/common/PhoneInput";
 import { type MockLead } from "../data/mockCrmData";
 import {
   createLeadRecord,
@@ -152,9 +153,9 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
   );
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const phone = draft.phone.replace(/\D/g, "");
+    const phone = phoneIdentity(draft.phone);
     const email = draft.email.trim().toLowerCase();
-    if (allLeads.some((item) => item.phone.replace(/\D/g, "") === phone)) {
+    if (allLeads.some((item) => phoneIdentity(item.phone) === phone)) {
       setLeadError("Já existe um lead com este telefone.");
       return;
     }
@@ -636,17 +637,10 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
                   placeholder="nome@empresa.com"
                 />
               </label>
-              <label>
+              <div className="field phone-field">
                 <span>TELEFONE *</span>
-                <input
-                  required
-                  value={draft.phone}
-                  onChange={(event) =>
-                    setDraft({ ...draft, phone: event.target.value })
-                  }
-                  placeholder="(31) 99999-9999"
-                />
-              </label>
+                <PhoneInput required value={draft.phone} onChange={phone=>setDraft({...draft,phone})}/>
+              </div>
               <label>
                 <span>ORIGEM *</span>
                 <select
