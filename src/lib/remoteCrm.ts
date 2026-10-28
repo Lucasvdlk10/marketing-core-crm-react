@@ -235,6 +235,7 @@ export async function bootstrapRemoteCrm(
   if (!workspace)
     throw Error("Workspace do usuário não encontrado ou suspenso.");
   const w = workspace.id;
+  const canReadAutomations = new Set(["owner", "admin", "marketing_manager", "viewer"]).has(String(membership.role).toLowerCase());
   const [
     contacts,
     pipelines,
@@ -298,9 +299,9 @@ export async function bootstrapRemoteCrm(
       "core_segment_list_members",
       `select=id,workspace_id,list_id,contact_id,deal_id,added_by_rule_id,reason,added_at&workspace_id=eq.${encode(w)}&order=added_at.desc,id.desc`,
     ),
-    crmApi.rpc("core_automation_list", { p_workspace: w }) as Promise<
-      RemoteAutomation[]
-    >,
+    canReadAutomations
+      ? crmApi.rpc("core_automation_list", { p_workspace: w }) as Promise<RemoteAutomation[]>
+      : Promise.resolve([] as RemoteAutomation[]),
     crmApi.rpc("core_dashboard_summary", { p_workspace: w }) as Promise<Record<
       string,
       unknown
