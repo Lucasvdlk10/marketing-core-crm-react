@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCrmApi } from '../lib/api';
 
 describe('contratos da API', () => {
+  it('usa a URL pública configurada com o caminho do GitHub Pages na recuperação', async()=>{
+    const fetcher=vi.fn().mockResolvedValue(new Response('{}',{status:200}));
+    const api=createCrmApi({url:'https://staging.example.com',anonKey:'public-key-that-is-long-enough',appUrl:'https://lucasvdlk10.github.io/marketing-core-crm-react/'},fetcher);
+    await api.recover('maykelly@example.com');
+    const body=JSON.parse(String(fetcher.mock.calls[0][1]?.body));
+    expect(body.options.redirect_to).toBe('https://lucasvdlk10.github.io/marketing-core-crm-react/');
+  });
+
   it('captura a sessão de recuperação do hash e limpa apenas os parâmetros sensíveis da URL', async () => {
     history.replaceState(null,'','/?campaign=crm#access_token=access&refresh_token=refresh&expires_in=3600&type=recovery');
     const api=createCrmApi({url:'https://staging.example.com',anonKey:'public-key-that-is-long-enough'},vi.fn());
