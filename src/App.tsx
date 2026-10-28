@@ -16,6 +16,7 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { TeamPage } from "./pages/TeamPage";
 import { SettingsPage, type CompanyProfile } from "./pages/SettingsPage";
+import { ProfilePage, type UserProfile } from "./pages/ProfilePage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import {
   bootstrapRemoteCrm,
@@ -41,6 +42,7 @@ export function App() {
   const [remoteReady, setRemoteReady] = useState(()=>Boolean(session&&restoreRemoteSnapshot(session)));
   const [remoteLoading, setRemoteLoading] = useState(()=>Boolean(session&&!getRemoteSnapshot()));
   const [idlePrompt, setIdlePrompt] = useState(false);
+  const [userProfile,setUserProfile]=useState<UserProfile|null>(null);
   const idleController = useRef<ReturnType<typeof startIdleSession> | null>(
     null,
   );
@@ -71,7 +73,7 @@ export function App() {
     canManageTeamRoute && canManageSettingsRoute ? "admin" : "employee";
   const currentUser = previewMode
     ? "Modo de visualização"
-    : String((session?.user as any)?.email || "Usuário");
+    : userProfile?.full_name?.trim().split(/\s+/)[0] || String((session?.user as any)?.email || "Usuário");
   useEffect(() => {
     if (!recoveryMode) return;
     if (!crmApi) {
@@ -123,6 +125,12 @@ export function App() {
       active = false;
     };
   }, [session, recoveryMode]);
+  useEffect(()=>{
+    if(!session||!remoteReady||!crmApi){setUserProfile(null);return}
+    let active=true;
+    crmApi.rpc('core_my_profile_get',{}).then(value=>{if(active)setUserProfile(value as UserProfile)}).catch(()=>{});
+    return()=>{active=false};
+  },[session,remoteReady]);
   useEffect(() => {
     if ((!session && !previewMode) || recoveryMode) return;
     recordSessionAudit(currentUser, "login");
@@ -243,6 +251,7 @@ export function App() {
         role={accessRole}
         visibleModules={visibleModules}
         userName={currentUser}
+        userAvatar={userProfile?.avatar_data}
         onLogout={() => {
           recordSessionAudit(currentUser, "logout_manual");
           clearRemoteSnapshot();
@@ -271,6 +280,7 @@ export function App() {
           <Route path="/reports" element={visibleModules.has('reports')?<ReportsPage />:<Navigate to="/dashboard" replace/>} />
           <Route path="/integrations" element={visibleModules.has('integrations')?<IntegrationsPage />:<Navigate to="/dashboard" replace/>} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<ProfilePage onSaved={setUserProfile}/>} />
           <Route
             path="/team"
             element={

@@ -60,4 +60,14 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('menuitem',{name:/Sair/}));
     expect(logout).toHaveBeenCalledOnce();
   });
+
+  it('oferece perfil ao funcionário sem expor configurações gerais',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter initialEntries={['/dashboard']}><AppShell role="employee" workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Marina Souza"><LocationProbe/></AppShell></MemoryRouter>);
+    await user.click(screen.getByRole('button',{name:'Menu do usuário'}));
+    expect(screen.getByRole('menuitem',{name:/Editar perfil/})).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem',{name:/Configurações/})).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem',{name:/Editar perfil/}));
+    expect(screen.getByTestId('current-location')).toHaveTextContent('/profile');
+  });
 });
