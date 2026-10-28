@@ -192,9 +192,10 @@ describe("authenticated remote adapter", () => {
       {id:'wait',kind:'wait' as const,label:'Aguardar',x:3,y:3,waitConfig:{delay:15,unit:'minutes' as const}},
       {id:'stage',kind:'stage' as const,label:'Mover etapa',x:4,y:4,stageConfig:{stageId:'stage-1',stageName:'Qualificação'}},
       {id:'tag',kind:'tag' as const,label:'Adicionar tag',x:5,y:5,tagName:'VIP'},
-      {id:'source-condition',kind:'condition' as const,label:'Condição',x:6,y:6,conditionConfig:{subtype:'SOURCE_EQUALS' as const,value:'Indicação'}},
-      {id:'campaign-condition',kind:'condition' as const,label:'Condição',x:7,y:7,conditionConfig:{subtype:'CAMPAIGN_EQUALS' as const,value:'Black Friday'}},
-      {id:'stage-condition',kind:'condition' as const,label:'Condição',x:8,y:8,conditionConfig:{subtype:'STAGE_EQUALS' as const,stageId:'stage-2',stageName:'Proposta'}},
+      {id:'deal',kind:'deal' as const,label:'Criar negociação',x:6,y:6,dealConfig:{assigneeId:'user-1',assigneeLabel:'Pessoa Remota',name:'Nova negociação',pipelineId:'pipeline-1',pipelineName:'Pipeline comercial',stageId:'stage-1',stageName:'Qualificação'}},
+      {id:'source-condition',kind:'condition' as const,label:'Condição',x:7,y:7,conditionConfig:{subtype:'SOURCE_EQUALS' as const,value:'Indicação'}},
+      {id:'campaign-condition',kind:'condition' as const,label:'Condição',x:8,y:8,conditionConfig:{subtype:'CAMPAIGN_EQUALS' as const,value:'Black Friday'}},
+      {id:'stage-condition',kind:'condition' as const,label:'Condição',x:9,y:9,conditionConfig:{subtype:'STAGE_EQUALS' as const,stageId:'stage-2',stageName:'Proposta'}},
     ];
     const graph=automationGraphFromUi(nodes,[]);
     expect(graph.nodes.map(({id,type,subtype,config})=>({id,type,subtype,config}))).toEqual([
@@ -204,10 +205,11 @@ describe("authenticated remote adapter", () => {
       {id:'wait',type:'action',subtype:'WAIT',config:{delay:15,unit:'minutes'}},
       {id:'stage',type:'action',subtype:'MOVE_STAGE',config:{stage_id:'stage-1'}},
       {id:'tag',type:'action',subtype:'ADD_TAG',config:{tag_name:'VIP'}},
+      {id:'deal',type:'action',subtype:'CREATE_DEAL',config:{owner_id:'user-1',name:'Nova negociação',pipeline_id:'pipeline-1',stage_id:'stage-1'}},
       {id:'source-condition',type:'condition',subtype:'SOURCE_EQUALS',config:{value:'Indicação'}},
       {id:'campaign-condition',type:'condition',subtype:'CAMPAIGN_EQUALS',config:{value:'Black Friday'}},
       {id:'stage-condition',type:'condition',subtype:'STAGE_EQUALS',config:{stage_id:'stage-2'}},
     ]);
-    expect(automationGraphToUi(graph).nodes).toMatchObject(nodes.map(node=>node.kind==='stage'?{...node,stageConfig:{stageId:node.stageConfig.stageId}}:node.kind==='condition'&&node.conditionConfig.subtype==='STAGE_EQUALS'?{...node,conditionConfig:{subtype:'STAGE_EQUALS',stageId:node.conditionConfig.stageId}}:node));
+    expect(automationGraphToUi(graph).nodes).toMatchObject(nodes.map(node=>node.kind==='stage'?{...node,stageConfig:{stageId:node.stageConfig.stageId}}:node.kind==='deal'?{...node,dealConfig:{...node.dealConfig,assigneeLabel:'',pipelineName:'',stageName:''}}:node.kind==='condition'&&node.conditionConfig.subtype==='STAGE_EQUALS'?{...node,conditionConfig:{subtype:'STAGE_EQUALS',stageId:node.conditionConfig.stageId}}:node));
   });
 });
