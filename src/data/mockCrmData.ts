@@ -1,0 +1,27 @@
+export type MockLead={id:string;name:string;email:string;phone:string;company:string;cpf?:string;cnpj?:string;source:string;status:'Novo'|'Qualificado'|'Oportunidade'|'Cliente';createdAt:string};
+export type MockOpportunity={id:string;leadId:string;name:string;company:string;contact:string;stage:'Qualificação'|'Diagnóstico'|'Proposta'|'Negociação'|'Ganho';value:number;nextAction:string};
+const first=['Ana','Bruno','Carolina','Daniel','Eduarda','Felipe','Gabriela','Henrique','Isabela','João','Karina','Lucas','Mariana','Nicolas','Olívia','Paulo','Renata','Samuel','Talita','Vinícius'];
+const last=['Almeida','Barbosa','Carvalho','Dias','Esteves','Ferreira','Gomes','Lima','Martins','Nogueira','Oliveira','Pereira','Rocha','Santos','Silva','Teixeira'];
+const companies=['Vértice Engenharia','Lumina Saúde','NorteLog','Órbita Tech','Ponto Alto Imóveis','Essenza Estética','Vale Forte Contábil','Horizonte Solar','Arco Educação','Nexa Distribuição','Cromo Arquitetura','Vitalis Clínica'];
+const sources=['Landing page','Google Ads','Indicação','Instagram','LinkedIn','Evento','Site institucional'];
+const statusAt=(index:number):MockLead['status']=>index<116?'Novo':index<184?'Qualificado':index<217?'Oportunidade':'Cliente';
+export const mockLeads:MockLead[]=Array.from({length:248},(_,index)=>{const name=`${first[index%first.length]} ${last[(index*3)%last.length]}`;const cpfBase=String(100000000+index);const cnpjBase=String(12000000+index);return{id:`lead-${index+1}`,name,email:`${name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(' ','.')}@exemplo.com.br`,phone:`(31) 9${String(81000000+index).slice(-8)}`,company:companies[index%companies.length],cpf:`${cpfBase.slice(0,3)}.${cpfBase.slice(3,6)}.${cpfBase.slice(6,9)}-${String(10+(index%90)).padStart(2,'0')}`,cnpj:`${cnpjBase.slice(0,2)}.${cnpjBase.slice(2,5)}.${cnpjBase.slice(5,8)}/0001-${String(10+(index%90)).padStart(2,'0')}`,source:sources[index%sources.length],status:statusAt(index),createdAt:`${String(22-(index%18)).padStart(2,'0')}/10/2026`}});
+const opportunityLeads=mockLeads.slice(184);
+const stageAt=(index:number):MockOpportunity['stage']=>index<14?'Qualificação':index<23?'Diagnóstico':index<29?'Proposta':index<33?'Negociação':'Ganho';
+export const mockOpportunities:MockOpportunity[]=opportunityLeads.map((lead,index)=>({id:`opp-${index+1}`,leadId:lead.id,name:index%3===0?'Implantação CRM':index%3===1?'Consultoria Growth':'Plano de aquisição',company:lead.company,contact:lead.name,stage:stageAt(index),value:index>=33?(index===33?2400:2800):1800+((index*700)%7200),nextAction:index%2?'Reunião agendada':'Retorno comercial'}));
+export const mockStats={leads:mockLeads.length,opportunities:mockOpportunities.length,won:mockOpportunities.filter(item=>item.stage==='Ganho').length,revenue:mockOpportunities.filter(item=>item.stage==='Ganho').reduce((sum,item)=>sum+item.value,0),conversion:24.7};
+export const pipelineStages=(['Qualificação','Diagnóstico','Proposta','Negociação','Ganho'] as const).map(name=>({name,items:mockOpportunities.filter(item=>item.stage===name)}));
+export type MockMember={id:string;name:string;email:string;role:string;status:'Ativo'|'Ausente';color:string};
+export type MockTask={id:string;title:string;leadId:string;leadName:string;company:string;assigneeId:string;assignee:string;dueAt:string;priority:'Alta'|'Média'|'Baixa';status:'Pendente'|'Em andamento'|'Concluída'};
+export const mockTeam:MockMember[]=[
+ {id:'member-1',name:'Camila Andrade',email:'camila@marketingcore.com.br',role:'Gestora comercial',status:'Ativo',color:'#6366F1'},
+ {id:'member-2',name:'Rafael Mendes',email:'rafael@marketingcore.com.br',role:'Executivo de vendas',status:'Ativo',color:'#00AFC1'},
+ {id:'member-3',name:'Juliana Costa',email:'juliana@marketingcore.com.br',role:'SDR',status:'Ativo',color:'#8B68DB'},
+ {id:'member-4',name:'Matheus Ribeiro',email:'matheus@marketingcore.com.br',role:'Executivo de vendas',status:'Ativo',color:'#E59A38'},
+ {id:'member-5',name:'Larissa Freitas',email:'larissa@marketingcore.com.br',role:'Customer Success',status:'Ativo',color:'#18A879'},
+ {id:'member-6',name:'Diego Martins',email:'diego@marketingcore.com.br',role:'SDR',status:'Ativo',color:'#E35D75'},
+ {id:'member-7',name:'Beatriz Lima',email:'beatriz@marketingcore.com.br',role:'Analista comercial',status:'Ausente',color:'#6380F4'},
+];
+const taskTitles=['Fazer primeiro contato','Qualificar necessidade','Agendar reunião de diagnóstico','Enviar apresentação comercial','Confirmar decisores','Preparar proposta','Retornar proposta enviada'];
+export const mockTasks:MockTask[]=Array.from({length:21},(_,index)=>{const lead=mockLeads[116+index*3];const member=mockTeam[index%mockTeam.length];return{id:`task-${index+1}`,title:taskTitles[index%taskTitles.length],leadId:lead.id,leadName:lead.name,company:lead.company,assigneeId:member.id,assignee:member.name,dueAt:index%5===0?'Hoje':index%5===1?'Amanhã':`${24+(index%6)} out.`,priority:index%4===0?'Alta':index%4===1?'Baixa':'Média',status:index%3===0?'Em andamento':index%3===1?'Pendente':'Concluída'}});
+export const memberWorkload=mockTeam.map(member=>({...member,tasks:mockTasks.filter(task=>task.assigneeId===member.id),activeTasks:mockTasks.filter(task=>task.assigneeId===member.id&&task.status!=='Concluída').length,assignedLeads:new Set(mockTasks.filter(task=>task.assigneeId===member.id).map(task=>task.leadId)).size}));

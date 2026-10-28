@@ -1,0 +1,2 @@
+import type { ReactNode } from 'react';
+export function Modal({title,open,onClose,children}:{title:string;open:boolean;onClose:()=>void;children:ReactNode}){if(!open)return null;return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header className="modal-header"><h2>{title}</h2><button className="icon-btn" onClick={onClose} aria-label="Fechar">×</button></header><div className="modal-body">{children}</div></section></div>}

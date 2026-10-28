@@ -1,0 +1,6 @@
+export const CRM_IDLE_PROMPT_MS=10*60*1000;
+export const CRM_IDLE_TIMEOUT_MS=20*60*1000;
+type IdleSessionOptions={onPrompt:()=>void;onLogout:(reason:'timeout'|'declared_offline')=>void;promptMs?:number;timeoutMs?:number};
+export function startIdleSession({onPrompt,onLogout,promptMs=CRM_IDLE_PROMPT_MS,timeoutMs=CRM_IDLE_TIMEOUT_MS}:IdleSessionOptions){let prompted=false;let promptTimer=0;let logoutTimer=0;const clear=()=>{window.clearTimeout(promptTimer);window.clearTimeout(logoutTimer)};const arm=()=>{clear();prompted=false;promptTimer=window.setTimeout(()=>{prompted=true;onPrompt()},promptMs);logoutTimer=window.setTimeout(()=>onLogout('timeout'),timeoutMs)};const activity=()=>{if(!prompted)arm()};const events=['pointerdown','pointermove','keydown','scroll','touchstart'] as const;events.forEach(event=>window.addEventListener(event,activity,{passive:true}));arm();return{confirmPresent(){arm()},declareOffline(){clear();onLogout('declared_offline')},stop(){clear();events.forEach(event=>window.removeEventListener(event,activity))}}}
+export function startIdleLogout(onTimeout:()=>void,timeoutMs=CRM_IDLE_TIMEOUT_MS){const session=startIdleSession({onPrompt:()=>{},onLogout:()=>onTimeout(),promptMs:timeoutMs,timeoutMs});return session.stop}
+

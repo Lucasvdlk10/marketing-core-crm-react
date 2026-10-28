@@ -1,0 +1,2 @@
+import type { FormEvent,ReactNode } from 'react';
+export function EntityForm({children,onSubmit,submitLabel='Salvar'}:{children:ReactNode;onSubmit:(data:Record<string,string>)=>void;submitLabel?:string}){function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();onSubmit(Object.fromEntries(new FormData(e.currentTarget).entries()) as Record<string,string>)}return <form onSubmit={submit}><div className="form-grid">{children}</div><div className="modal-actions"><button className="btn primary" type="submit">{submitLabel}</button></div></form>}

@@ -1,0 +1,2 @@
+import type {ReactNode} from 'react';import {Sidebar,type WorkspaceIdentity} from './Sidebar';import {Header} from './Header';
+export function AppShell({workspace,userName,role='admin',onLogout=()=>{},children}:{workspace:WorkspaceIdentity;userName:string;role?:'admin'|'employee';onLogout?:()=>void;children:ReactNode}){return <div className="app-shell"><Sidebar workspace={workspace} role={role}/><div className="main-area"><Header userName={userName} role={role} onLogout={onLogout}/><main className="main-content">{children}</main></div></div>}

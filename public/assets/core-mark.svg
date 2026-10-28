@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-labelledby="title desc">
+  <title id="title">Marketing Core - símbolo</title>
+  <desc id="desc">Símbolo geométrico do Marketing Core com facetas violeta e cyan convergindo para um núcleo central.</desc>
+  <defs>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00DCEB"/><stop offset="100%" stop-color="#0284C7"/></linearGradient>
+    <linearGradient id="violetGrad" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#6366F1"/><stop offset="100%" stop-color="#4338CA"/></linearGradient>
+    <linearGradient id="glowGrad" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#00DCEB"/><stop offset="100%" stop-color="#6366F1"/></linearGradient>
+  </defs>
+  <g transform="translate(100 100)">
+    <path d="M 0,-40 L -45,-70 L -80,-30 L -50,30 Z" fill="url(#violetGrad)"/>
+    <path d="M -80,-30 L -50,30 L 0,80 L -15,10 Z" fill="url(#violetGrad)" opacity=".82"/>
+    <path d="M 0,-40 L 45,-70 L 80,-30 L 50,30 Z" fill="url(#cyanGrad)"/>
+    <path d="M 80,-30 L 50,30 L 0,80 L 15,10 Z" fill="url(#cyanGrad)" opacity=".82"/>
+    <path d="M 0,-50 L 50,-10 L 0,70 L -50,-10 Z" fill="url(#glowGrad)"/>
+    <path d="M 0,-50 L 50,-10 L 0,15 Z" fill="#fff" opacity=".30"/>
+    <path d="M 0,15 L 50,-10 L 0,70 Z" fill="#0F172A" opacity=".15"/>
+    <path d="M 0,-50 L -50,-10 L 0,15 Z" fill="#fff" opacity=".48"/>
+    <path d="M 0,15 L -50,-10 L 0,70 Z" fill="#0F172A" opacity=".28"/>
+    <polygon points="0,-15 15,5 0,25 -15,5" fill="#fff"/>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+export type CrmNotification={id:string;title:string;detail:string;time:string;read:boolean;tone:'lead'|'task'|'deal';route:string};
+import {getRemoteSnapshot,isRemoteMode,markAllRemoteNotificationsRead,markRemoteNotificationRead} from './remoteCrm';
+const storageKey='marketing_core_notifications';
+const eventName='marketing-core-notifications-updated';
+export const defaultNotifications:CrmNotification[]=[
+ {id:'notification-1',title:'Novo lead recebido',detail:'Mariana Esteves entrou pelo formulário da campanha.',time:'Agora',read:false,tone:'lead',route:'/contacts?lead=lead-13'},
+ {id:'notification-2',title:'Tarefa próxima do prazo',detail:'Fazer primeiro contato com Arco Educação.',time:'Há 18 min',read:false,tone:'task',route:'/tasks?task=task-1'},
+ {id:'notification-3',title:'Negociação atualizada',detail:'Implantação CRM, da Ponto Alto Imóveis, avançou no processo comercial.',time:'Há 1 h',read:false,tone:'deal',route:'/pipeline?deal=opp-1'},
+ {id:'notification-4',title:'Reunião confirmada',detail:'NorteLog confirmou a reunião de diagnóstico.',time:'Há 3 h',read:true,tone:'task',route:'/calendar?event=task-3'}
+];
+export const getNotifications=():CrmNotification[]=>{if(isRemoteMode())return(getRemoteSnapshot()?.notifications||[]).map(item=>({id:item.id,title:item.title,detail:item.body||'',time:new Intl.RelativeTimeFormat('pt-BR',{numeric:'auto'}).format(Math.round((new Date(item.created_at).getTime()-Date.now())/3600000),'hour'),read:Boolean(item.read_at),tone:item.kind.includes('deal')?'deal':item.kind.includes('lead')?'lead':'task',route:item.task_id?`/tasks?task=${item.task_id}`:item.kind.includes('deal')?'/pipeline':item.kind.includes('lead')?'/contacts':'/notifications'}));try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(!Array.isArray(saved))return defaultNotifications;return saved.map(item=>{const current=defaultNotifications.find(notification=>notification.id===item.id);return current?{...current,read:Boolean(item.read)}:item})}catch{return defaultNotifications}};
+export const saveNotifications=(items:CrmNotification[])=>{localStorage.setItem(storageKey,JSON.stringify(items));window.dispatchEvent(new Event(eventName))};
+export const markNotificationRead=async(id:string)=>{const next=getNotifications().map(item=>item.id===id?{...item,read:true}:item);if(isRemoteMode())await markRemoteNotificationRead(id);else saveNotifications(next);return next};
+export const markAllNotificationsRead=async()=>{const current=getNotifications();const next=current.map(item=>({...item,read:true}));if(isRemoteMode())await markAllRemoteNotificationsRead(current.filter(item=>!item.read).map(item=>item.id));else saveNotifications(next);return next};
+export const subscribeNotifications=(listener:()=>void)=>{window.addEventListener(eventName,listener);window.addEventListener('marketing-core-remote-updated',listener);return()=>{window.removeEventListener(eventName,listener);window.removeEventListener('marketing-core-remote-updated',listener)}};
