@@ -156,6 +156,8 @@ export type RemoteSnapshot = {
 };
 
 const workspaceKey = "marketing_core_active_workspace";
+const snapshotCacheKey = "marketing_core_remote_snapshot_v2";
+const snapshotCacheMaxAge = 12 * 60 * 60 * 1000;
 export const REMOTE_UPDATED_EVENT = "marketing-core-remote-updated";
 const encode = (value: string) => encodeURIComponent(value);
 const userId = (session: Session) => String(session.user?.id || "");
@@ -174,9 +176,20 @@ export function getRemoteWorkspaceId() {
 export function isRemoteMode() {
   return Boolean(crmApi?.getSession() && getRemoteWorkspaceId());
 }
+export function restoreRemoteSnapshot(session:Session):RemoteSnapshot|null{
+  try{
+    const envelope=JSON.parse(sessionStorage.getItem(snapshotCacheKey)||"null") as {userId?:string;savedAt?:number;snapshot?:RemoteSnapshot}|null;
+    if(!envelope?.snapshot||envelope.userId!==userId(session)||!envelope.savedAt||Date.now()-envelope.savedAt>snapshotCacheMaxAge){sessionStorage.removeItem(snapshotCacheKey);return null}
+    remoteSnapshot=envelope.snapshot;
+    sessionStorage.setItem(workspaceKey,envelope.snapshot.workspace.id);
+    return remoteSnapshot;
+  }catch{sessionStorage.removeItem(snapshotCacheKey);return null}
+}
 function store(snapshot: RemoteSnapshot) {
   remoteSnapshot = snapshot;
   sessionStorage.setItem(workspaceKey, snapshot.workspace.id);
+  const session=crmApi?.getSession();
+  if(session)try{sessionStorage.setItem(snapshotCacheKey,JSON.stringify({userId:userId(session),savedAt:Date.now(),snapshot}))}catch{sessionStorage.removeItem(snapshotCacheKey)}
   localStorage.removeItem("marketing_core_remote_snapshot");
   localStorage.removeItem(workspaceKey);
   window.dispatchEvent(new Event(REMOTE_UPDATED_EVENT));
@@ -185,6 +198,7 @@ function store(snapshot: RemoteSnapshot) {
 export function clearRemoteSnapshot() {
   remoteSnapshot = null;
   sessionStorage.removeItem(workspaceKey);
+  sessionStorage.removeItem(snapshotCacheKey);
   localStorage.removeItem("marketing_core_remote_snapshot");
   localStorage.removeItem(workspaceKey);
   window.dispatchEvent(new Event(REMOTE_UPDATED_EVENT));

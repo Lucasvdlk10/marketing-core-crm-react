@@ -21,6 +21,7 @@ import {
   bootstrapRemoteCrm,
   clearRemoteSnapshot,
   getRemoteSnapshot,
+  restoreRemoteSnapshot,
   updateRemoteWorkspaceName,
 } from "./lib/remoteCrm";
 import { canManageSettings, canManageTeam } from "./lib/authorization";
@@ -36,8 +37,8 @@ export function App() {
   );
   const previewMode = false;
   const [error, setError] = useState("");
-  const [remoteLoading, setRemoteLoading] = useState(Boolean(session));
-  const [remoteReady, setRemoteReady] = useState(false);
+  const [remoteReady, setRemoteReady] = useState(()=>Boolean(session&&restoreRemoteSnapshot(session)));
+  const [remoteLoading, setRemoteLoading] = useState(()=>Boolean(session&&!getRemoteSnapshot()));
   const [idlePrompt, setIdlePrompt] = useState(false);
   const idleController = useRef<ReturnType<typeof startIdleSession> | null>(
     null,
@@ -48,7 +49,7 @@ export function App() {
       tagline: "Estratégia, dados e crescimento",
       logoUrl: "./assets/core-mark.svg",
     };
-    if (session) return defaults;
+    if (session) return {...defaults,name:getRemoteSnapshot()?.workspace.name||defaults.name};
     try {
       return JSON.parse(localStorage.getItem("marketing_core_company_profile") || "null") || defaults;
     } catch {
@@ -90,7 +91,8 @@ export function App() {
       return;
     }
     let active = true;
-    setRemoteLoading(true);
+    const hadSnapshot=Boolean(getRemoteSnapshot());
+    setRemoteLoading(!hadSnapshot);
     bootstrapRemoteCrm(session)
       .then((snapshot) => {
         if (!active) return;
@@ -103,7 +105,7 @@ export function App() {
       })
       .catch((cause) => {
         if (active) {
-          setRemoteReady(false);
+          if(!hadSnapshot)setRemoteReady(false);
           setError(
             cause instanceof Error
               ? cause.message
@@ -134,6 +136,7 @@ export function App() {
         );
         setIdlePrompt(false);
         crmApi?.setSession(null);
+        clearRemoteSnapshot();
         setSession(null);
         setError(
           reason === "timeout"
@@ -156,6 +159,7 @@ export function App() {
           if (!crmApi) throw Error("Staging não configurado");
           await crmApi.updatePassword(password);
           crmApi.setSession(null);
+          clearRemoteSnapshot();
           setSession(null);
           setRecoveryMode(false);
           setError("Senha atualizada. Entre com sua nova senha.");
@@ -199,15 +203,16 @@ export function App() {
   if (session && !remoteReady)
     return (
       <div className="remote-bootstrap">
-        <div className="surface">
+        <div className="surface branded-bootstrap">
+          {remoteLoading&&<div className="brand-loader" aria-label="Carregando CRM"><span/><span/><span/><img src="./assets/core-mark.svg" alt="Marketing Core"/></div>}
           <strong>
             {remoteLoading
-              ? "Conectando ao Supabase staging…"
+              ? "Preparando seu CRM…"
               : "Não foi possível carregar o workspace"}
           </strong>
           <p>
             {remoteLoading
-              ? "Carregando contatos, pipelines, negociações, tarefas e configurações reais."
+              ? "Sincronizando os dados do workspace com segurança."
               : error}
           </p>
           {!remoteLoading && (

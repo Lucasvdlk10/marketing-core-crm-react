@@ -9,6 +9,7 @@ vi.mock("../lib/api", () => ({ crmApi: api }));
 
 import {
   bootstrapRemoteCrm,
+  restoreRemoteSnapshot,
   updateRemoteWorkspaceName,
 } from "../lib/remoteCrm";
 import {
@@ -82,6 +83,14 @@ describe("authenticated remote adapter", () => {
     await expect(bootstrapRemoteCrm(session)).rejects.toThrow(
       "automation denied",
     );
+  });
+
+  it("restores the session-scoped snapshot only for the same authenticated user",async()=>{
+    await bootstrapRemoteCrm(session);
+    expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toContain('workspace-1');
+    expect(restoreRemoteSnapshot(session)?.workspace.id).toBe('workspace-1');
+    expect(restoreRemoteSnapshot({...session,user:{id:'other-user'}})).toBeNull();
+    expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toBeNull();
   });
 
   it("updates the workspace name and confirms it with a separate read-back", async () => {
