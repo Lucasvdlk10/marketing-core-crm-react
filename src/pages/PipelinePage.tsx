@@ -82,7 +82,7 @@ type StoredSegmentList = {
   leadIds?: string[];
 };
 type PipelineFilters = {
-  outcome: "" | "won" | "lost";
+  outcome: "open" | "won" | "lost";
   tag: string;
   source: string;
   campaign: string;
@@ -91,7 +91,7 @@ type PipelineFilters = {
   segment: string;
 };
 const emptyFilters: PipelineFilters = {
-  outcome: "",
+  outcome: "open",
   tag: "",
   source: "",
   campaign: "",
@@ -330,9 +330,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
         : /ganh|won/i.test(deal.stage)
           ? "won"
           : "open");
-    if (filters.outcome === "won" && result !== "won") return false;
-    if (filters.outcome === "lost" && result !== "lost") return false;
-    if (filters.outcome === "" && result === "lost") return false;
+    if (result !== filters.outcome) return false;
     if (!lead)
       return (
         !filters.tag &&
@@ -369,7 +367,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     items: filteredDeals.filter((item) => item.stage === stage.name),
   }));
   const total = stages.reduce((sum, stage) => sum + stage.items.length, 0);
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const activeFilterCount = Object.entries(filters).filter(([key,value])=>key!=="outcome"&&Boolean(value)).length;
   const phoneMatch = useMemo(() => {
     const phone = normalizePhone(draft.phone);
     const email = draft.email.trim().toLowerCase();
@@ -807,6 +805,9 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
           </div>
         }
       />
+      <nav className="pipeline-outcome-menu" aria-label="Status das negociações">
+        {([{value:'open',label:'Em andamento'},{value:'won',label:'Ganhos'},{value:'lost',label:'Perdidos'}] as const).map(item=><button key={item.value} type="button" className={filters.outcome===item.value?'active':''} aria-pressed={filters.outcome===item.value} onClick={()=>{setFilters(current=>({...current,outcome:item.value}));setFilterDraft(current=>({...current,outcome:item.value}))}}>{item.label}</button>)}
+      </nav>
       {preview || isRemoteMode() ? (
         <div className="pipeline-summary">
           <strong>{total} negociações</strong>
@@ -947,23 +948,6 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
               </button>
             </header>
             <div className="pipeline-filter-body">
-              <label className="field">
-                <span>Resultado</span>
-                <select
-                  aria-label="Resultado da negociação"
-                  value={filterDraft.outcome}
-                  onChange={(event) =>
-                    setFilterDraft({
-                      ...filterDraft,
-                      outcome: event.target.value as PipelineFilters["outcome"],
-                    })
-                  }
-                >
-                  <option value="">Todos os resultados</option>
-                  <option value="won">Leads ganhos</option>
-                  <option value="lost">Leads perdidos</option>
-                </select>
-              </label>
               <label className="field">
                 <span>Tag</span>
                 <select

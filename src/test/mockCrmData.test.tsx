@@ -22,7 +22,7 @@ describe('dados fictícios consistentes do CRM',()=>{
   expect(screen.getByText('248 contatos')).toBeInTheDocument();
   expect(screen.getAllByText('Vértice Engenharia').length).toBeGreaterThan(0);
   render(<MemoryRouter><PipelinePage preview/></MemoryRouter>);
-  expect(screen.getByText('64 negociações')).toBeInTheDocument();
+  expect(screen.getByText('33 negociações')).toBeInTheDocument();
   expect(screen.getByText(/31 ganhos/)).toBeInTheDocument();
  });
 });
