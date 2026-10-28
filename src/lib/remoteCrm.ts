@@ -114,6 +114,7 @@ export type RemoteSegmentList = {
   name: string;
   category: "RECOVERY" | "MARKETING" | "CUSTOM";
   description: string | null;
+  filters?: Record<string,string>;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -296,7 +297,7 @@ export async function bootstrapRemoteCrm(
     ),
     select<RemoteSegmentList>(
       "core_segment_lists",
-      `select=id,workspace_id,name,category,description,created_by,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
+      `select=id,workspace_id,name,category,description,filters,created_by,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
     ),
     select<RemoteSegmentMember>(
       "core_segment_list_members",

@@ -34,7 +34,7 @@ describe('SegmentsPage remote management',()=>{
   await user.click(screen.getByRole('button',{name:'Editar Lista livre'}));
   const name=screen.getByLabelText('Nome da lista');await user.clear(name);await user.type(name,'Lista livre atualizada');
   await user.click(screen.getByRole('button',{name:'Salvar alterações'}));
-  expect(rpc).toHaveBeenCalledWith('core_segment_list_update',{p_workspace:'workspace-1',p_list_id:'list-free',p_name:'Lista livre atualizada',p_description:'Pode excluir'});
+  expect(rpc).toHaveBeenCalledWith('core_segment_list_update_with_members',expect.objectContaining({p_workspace:'workspace-1',p_list_id:'list-free',p_name:'Lista livre atualizada',p_description:'Pode excluir',p_filters:expect.any(Object),p_contact_ids:[]}));
   await user.click(screen.getByRole('button',{name:'Excluir Lista livre atualizada'}));
   await user.click(screen.getByRole('button',{name:'Confirmar exclusão'}));
   expect(rpc).toHaveBeenCalledWith('core_segment_list_delete',{p_workspace:'workspace-1',p_list_id:'list-free'});
