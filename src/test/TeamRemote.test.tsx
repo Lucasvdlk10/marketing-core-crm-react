@@ -2,8 +2,8 @@ import {render,screen,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 
-const {request,invokeFunction}=vi.hoisted(()=>({request:vi.fn(),invokeFunction:vi.fn()}));
-vi.mock('../lib/api',()=>({crmApi:{request,invokeFunction,recover:vi.fn()}}));
+const {request,invokeFunction,rpc}=vi.hoisted(()=>({request:vi.fn(),invokeFunction:vi.fn(),rpc:vi.fn()}));
+vi.mock('../lib/api',()=>({crmApi:{request,invokeFunction,rpc,recover:vi.fn()}}));
 vi.mock('../lib/remoteCrm',()=>({
   getRemoteWorkspaceId:()=> 'workspace-1',
   getRemoteSnapshot:()=>({members:[{user_id:'user-1',full_name:'Ana Admin'},{user_id:'user-2',full_name:'Bruno SDR'}]}),
@@ -26,7 +26,10 @@ function respond(path:string){
 }
 
 describe('TeamPage autenticada',()=>{
-  beforeEach(()=>{request.mockReset().mockImplementation(respond);invokeFunction.mockReset()});
+  beforeEach(()=>{request.mockReset().mockImplementation(respond);invokeFunction.mockReset();rpc.mockReset().mockImplementation((name:string)=>name==='core_team_member_directory'?Promise.resolve([
+    {user_id:'user-1',full_name:'Ana Admin',email:'ana@example.com'},
+    {user_id:'user-2',full_name:'Bruno SDR',email:'bruno@example.com'},
+  ]):Promise.resolve(null))});
 
   it('lista membros reais e convites pendentes sem transformar convite em membro ativo',async()=>{
     render(<TeamPage/>);
@@ -79,5 +82,22 @@ describe('TeamPage autenticada',()=>{
     await user.click(screen.getByRole('button',{name:'Revogar convite pending@example.com'}));
     expect(invokeFunction).toHaveBeenCalledWith('core-invite-member',{action:'revoke_invite',invitation_id:'invite-1'});
     await waitFor(()=>expect(screen.queryByText('pending@example.com')).not.toBeInTheDocument());
+  });
+
+  it('exibe identidade real e persiste edição e inativação no backend',async()=>{
+    const user=userEvent.setup();
+    render(<TeamPage/>);
+    expect(await screen.findByText('Ana Admin')).toBeInTheDocument();
+    expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'Editar Ana Admin'}));
+    await user.clear(screen.getByLabelText('Nome do membro'));
+    await user.type(screen.getByLabelText('Nome do membro'),'Ana Atualizada');
+    await user.selectOptions(screen.getByLabelText('Função do membro'),'owner');
+    await user.click(screen.getByRole('button',{name:'Salvar alterações'}));
+    expect(rpc).toHaveBeenCalledWith('core_team_update_member_profile',{w:'workspace-1',p_user:'user-1',p_full_name:'Ana Atualizada',p_role:'owner',p_active:true});
+
+    await user.click(screen.getByRole('button',{name:'Inativar Bruno SDR'}));
+    await user.click(screen.getByRole('button',{name:'Confirmar inativação'}));
+    expect(rpc).toHaveBeenCalledWith('core_team_update_member_profile',{w:'workspace-1',p_user:'user-2',p_full_name:'Bruno SDR',p_role:'sdr',p_active:false});
   });
 });
