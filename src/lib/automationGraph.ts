@@ -23,8 +23,8 @@ export function automationGraphFromUi(nodes:UiFlowNode[],connections:UiConnectio
  return {schema_version:'1',nodes:nodes.map(node=>{
   const contract=nodeContract(node);
   const config:Record<string,unknown>={};
-  if(node.entrySource)Object.assign(config,{source_type:node.entrySource.type,source_id:node.entrySource.id,source_label:node.entrySource.label});
-  if(node.taskTemplate)Object.assign(config,{template_id:node.taskTemplate.id,template_title:node.taskTemplate.title});
+  if(node.entrySource)Object.assign(config,{source_type:node.entrySource.type,source_id:node.entrySource.id});
+  if(node.taskTemplate)config.title=node.taskTemplate.title;
   if(node.emailConfig)Object.assign(config,node.emailConfig);
   if(node.whatsappConfig)Object.assign(config,node.whatsappConfig);
   if(node.waitConfig)Object.assign(config,node.waitConfig);
@@ -43,8 +43,9 @@ export function automationGraphToUi(graph:AutomationGraphV1):{nodes:UiFlowNode[]
   const kind:UiActionKind=node.type==='trigger'?'trigger':node.type==='condition'?'condition':subtypeKinds[node.subtype]||'email';
   const labels:Record<UiActionKind,string>={trigger:'Lead entra no fluxo',email:'Enviar e-mail',whatsapp:'Enviar WhatsApp',task:'Criar tarefa',wait:'Aguardar',stage:'Mover etapa',tag:'Adicionar tag',deal:'Criar negociação',condition:'Condição'};
   const result:UiFlowNode={id:node.id,kind,label:typeof config.ui_label==='string'?config.ui_label:labels[kind],x:node.position.x,y:node.position.y};
-  if(typeof config.source_type==='string'&&typeof config.source_id==='string'&&typeof config.source_label==='string')result.entrySource={type:config.source_type as UiEntrySourceType,id:config.source_id,label:config.source_label};
-  if(typeof config.template_id==='string'&&typeof config.template_title==='string')result.taskTemplate={id:config.template_id,title:config.template_title};
+  if(typeof config.source_type==='string'&&typeof config.source_id==='string')result.entrySource={type:config.source_type as UiEntrySourceType,id:config.source_id,label:typeof config.source_label==='string'?config.source_label:config.source_id};
+  if(typeof config.title==='string')result.taskTemplate={id:typeof config.template_id==='string'?config.template_id:config.title,title:config.title};
+  else if(typeof config.template_id==='string'&&typeof config.template_title==='string')result.taskTemplate={id:config.template_id,title:config.template_title};
   if(typeof config.subject==='string'&&typeof config.body==='string')result.emailConfig={subject:config.subject,body:config.body};
   if(typeof config.message==='string')result.whatsappConfig={message:config.message};
   if(typeof config.delay==='number'&&typeof config.unit==='string')result.waitConfig={delay:config.delay,unit:config.unit as 'minutes'|'hours'|'days'};

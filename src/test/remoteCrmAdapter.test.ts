@@ -165,7 +165,6 @@ describe("authenticated remote adapter", () => {
           config: {
             source_type: "manual",
             source_id: "manual-created",
-            source_label: "Manual",
           },
         },
         {
@@ -173,7 +172,7 @@ describe("authenticated remote adapter", () => {
           type: "action",
           subtype: "CREATE_TASK",
           position: { x: 30, y: 40 },
-          config: { template_id: "Follow up", template_title: "Follow up" },
+          config: { title: "Follow up" },
         },
       ],
       edges: [{ id: "edge-1", source: "trigger-1", target: "task-1" }],
