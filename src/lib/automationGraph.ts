@@ -1,7 +1,7 @@
 export type UiActionKind='trigger'|'email'|'whatsapp'|'task'|'wait'|'stage'|'tag'|'deal'|'condition';
 export type UiEntrySourceType='segment'|'wordpress'|'webhook'|'facebook'|'api'|'manual';
 export type UiConditionSubtype='SOURCE_EQUALS'|'CAMPAIGN_EQUALS'|'STAGE_EQUALS';
-export type UiFlowNode={id:string;kind:UiActionKind;label:string;x:number;y:number;entrySource?:{type:UiEntrySourceType;id:string;label:string};taskTemplate?:{id:string;title:string};emailConfig?:{subject:string;body:string};whatsappConfig?:{message:string};waitConfig?:{delay:number;unit:'minutes'|'hours'|'days'};stageConfig?:{stageId:string;stageName:string};tagName?:string;dealConfig?:{assigneeId:string;assigneeLabel:string;name:string;pipelineId:string;pipelineName:string;stageId:string;stageName:string};conditionConfig?:{subtype:UiConditionSubtype;value?:string;stageId?:string;stageName?:string}};
+export type UiFlowNode={id:string;kind:UiActionKind;label:string;x:number;y:number;entrySource?:{type:UiEntrySourceType;id:string;label:string};taskTemplate?:{id:string;title:string};emailConfig?:{subject:string;body:string};whatsappConfig?:{message:string};waitConfig?:{delay:number;unit:'minutes'|'hours'|'days'};stageConfig?:{stageId:string;stageName:string};tagName?:string;dealConfig?:{assigneeId:string;assigneeLabel:string;pipelineId:string;pipelineName:string;stageId:string;stageName:string};conditionConfig?:{subtype:UiConditionSubtype;value?:string;stageId?:string;stageName?:string}};
 export type UiConnection={from:string;to:string};
 export type GraphV1Node={id:string;type:'trigger'|'condition'|'action';subtype:string;position:{x:number;y:number};config:Record<string,unknown>};
 export type AutomationGraphV1={schema_version:'1';nodes:GraphV1Node[];edges:Array<{id:string;source:string;target:string}>};
@@ -30,7 +30,7 @@ export function automationGraphFromUi(nodes:UiFlowNode[],connections:UiConnectio
   if(node.waitConfig)Object.assign(config,node.waitConfig);
   if(node.stageConfig)config.stage_id=node.stageConfig.stageId;
   if(node.tagName)config.tag_name=node.tagName;
-  if(node.dealConfig)Object.assign(config,{owner_id:node.dealConfig.assigneeId,name:node.dealConfig.name,pipeline_id:node.dealConfig.pipelineId,stage_id:node.dealConfig.stageId});
+  if(node.dealConfig)Object.assign(config,{owner_id:node.dealConfig.assigneeId,pipeline_id:node.dealConfig.pipelineId,stage_id:node.dealConfig.stageId});
   if(node.conditionConfig){if(node.conditionConfig.subtype==='STAGE_EQUALS')config.stage_id=node.conditionConfig.stageId;else config.value=node.conditionConfig.value;}
   return {id:node.id,...contract,position:{x:node.x,y:node.y},config};
  }),edges:connections.map((edge,index)=>({id:`edge-${index+1}`,source:edge.from,target:edge.to}))};
@@ -51,7 +51,7 @@ export function automationGraphToUi(graph:AutomationGraphV1):{nodes:UiFlowNode[]
   if(typeof config.delay==='number'&&typeof config.unit==='string')result.waitConfig={delay:config.delay,unit:config.unit as 'minutes'|'hours'|'days'};
   if(kind==='stage'&&typeof config.stage_id==='string')result.stageConfig={stageId:config.stage_id,stageName:''};
   if(typeof config.tag_name==='string')result.tagName=config.tag_name;
-  if(kind==='deal'&&typeof config.owner_id==='string'&&typeof config.name==='string')result.dealConfig={assigneeId:config.owner_id,assigneeLabel:'',name:config.name,pipelineId:typeof config.pipeline_id==='string'?config.pipeline_id:'',pipelineName:'',stageId:typeof config.stage_id==='string'?config.stage_id:'',stageName:''};
+  if(kind==='deal'&&typeof config.owner_id==='string')result.dealConfig={assigneeId:config.owner_id,assigneeLabel:'',pipelineId:typeof config.pipeline_id==='string'?config.pipeline_id:'',pipelineName:'',stageId:typeof config.stage_id==='string'?config.stage_id:'',stageName:''};
   if(node.type==='condition'){result.conditionConfig={subtype:node.subtype as UiConditionSubtype};if(node.subtype==='STAGE_EQUALS'&&typeof config.stage_id==='string')result.conditionConfig.stageId=config.stage_id;else if(typeof config.value==='string')result.conditionConfig.value=config.value;}
   return result;
  });
