@@ -5,6 +5,7 @@ import {ReportsPage} from '../pages/ReportsPage';
 
 const exports=vi.hoisted(()=>({csv:vi.fn(),xlsx:vi.fn(),pdf:vi.fn()}));
 vi.mock('../lib/exportReport',()=>({exportCsv:exports.csv,exportXlsx:exports.xlsx,exportPdf:exports.pdf}));
+vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>false,getRemoteWorkspaceId:()=>'',remoteRpc:vi.fn(),getRemoteSnapshot:()=>null,REMOTE_UPDATED_EVENT:'marketing-core-remote-updated'}));
 
 describe('ReportsPage',()=>{
   beforeEach(()=>{exports.csv.mockReset();exports.xlsx.mockReset();exports.pdf.mockReset()});
