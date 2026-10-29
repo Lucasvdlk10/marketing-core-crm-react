@@ -1,19 +1,14 @@
-import {render,screen} from '@testing-library/react';
+import {render,screen,waitFor,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {describe,expect,it} from 'vitest';
+import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {IntegrationsPage} from '../pages/IntegrationsPage';
-
+const mocked=vi.hoisted(()=>({listWebhooks:vi.fn(),createWebhook:vi.fn(),revealWebhook:vi.fn(),renameWebhook:vi.fn(),setWebhookEnabled:vi.fn(),deleteWebhook:vi.fn()}));
+vi.mock('../lib/webhooks',()=>mocked);
+const item={id:'11111111-1111-4111-8111-111111111111',public_id:'a'.repeat(32),name:'Leads Hub principal',url:'https://example.supabase.co/functions/v1/core-webhook-v2/'+('a'.repeat(32)),enabled:true,created_at:'2026-10-29T00:00:00Z',last_used_at:null};
 describe('IntegrationsPage',()=>{
-  it('exibe as integrações solicitadas e abre a configuração',async()=>{
-    const user=userEvent.setup();
-    render(<IntegrationsPage/>);
-
-    for(const name of ['Google Calendário','API','Webhook','Facebook','Google Ads','Plugin WordPress'])expect(screen.getByRole('heading',{name})).toBeInTheDocument();
-    await user.click(screen.getByRole('button',{name:'Configurar Webhook'}));
-    expect(screen.getByRole('heading',{name:'Configurar Webhook'})).toBeInTheDocument();
-    expect(screen.getByRole('button',{name:'Voltar para integrações'})).toBeInTheDocument();
-    expect(screen.queryByLabelText('URL do Webhook')).not.toBeInTheDocument();
-    expect(screen.getByText(/configuração ainda não está disponível/i)).toBeInTheDocument();
-    expect(screen.getByRole('button',{name:'Conexão indisponível'})).toBeDisabled();
-  });
+ beforeEach(()=>{Object.values(mocked).forEach(mock=>mock.mockReset());mocked.listWebhooks.mockResolvedValue([item]);Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:vi.fn().mockResolvedValue(undefined)}})});
+ it('exibe as integrações e carrega o webhook com URL imutável',async()=>{const user=userEvent.setup();render(<IntegrationsPage/>);for(const name of ['Google Calendário','API','Webhook','Facebook','Google Ads','Plugin WordPress'])expect(screen.getByRole('heading',{name})).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Configurar Webhook'}));expect(await screen.findByRole('heading',{name:'Leads Hub principal'})).toBeInTheDocument();expect(screen.getByDisplayValue(item.url)).toHaveAttribute('readonly');expect(screen.queryByLabelText(/alterar url/i)).not.toBeInTheDocument()});
+ it('cria URL e token no servidor e permite copiar ambos',async()=>{const user=userEvent.setup();mocked.listWebhooks.mockResolvedValue([]);mocked.createWebhook.mockResolvedValue({...item,token:'b'.repeat(64)});render(<IntegrationsPage/>);await user.click(screen.getByRole('button',{name:'Configurar Webhook'}));await user.click(await screen.findByRole('button',{name:'Criar webhook'}));const dialog=screen.getByRole('dialog');await user.type(within(dialog).getByLabelText('Nome do webhook'),'Captação site');await user.click(within(dialog).getByRole('button',{name:'Criar webhook'}));expect(mocked.createWebhook).toHaveBeenCalledWith('Captação site');expect(await screen.findByRole('heading',{name:'Webhook criado'})).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Copiar nova URL'}));expect(await navigator.clipboard.readText()).toBe(item.url);await user.click(screen.getByRole('button',{name:'Copiar novo token'}));expect(await navigator.clipboard.readText()).toBe('b'.repeat(64))});
+ it('revela e copia o token somente sob demanda',async()=>{const user=userEvent.setup();mocked.revealWebhook.mockResolvedValue('c'.repeat(64));render(<IntegrationsPage/>);await user.click(screen.getByRole('button',{name:'Configurar Webhook'}));await user.click(await screen.findByRole('button',{name:'Exibir token de Leads Hub principal'}));expect(mocked.revealWebhook).toHaveBeenCalledWith(item.id);await user.click(screen.getByRole('button',{name:'Copiar token de Leads Hub principal'}));expect(await navigator.clipboard.readText()).toBe('c'.repeat(64))});
+ it('renomeia, desativa e exclui sem permitir alterar URL ou token',async()=>{const user=userEvent.setup();render(<IntegrationsPage/>);await user.click(screen.getByRole('button',{name:'Configurar Webhook'}));await screen.findByRole('heading',{name:'Leads Hub principal'});await user.click(screen.getByRole('button',{name:'Alterar nome de Leads Hub principal'}));const name=screen.getByLabelText('Nome do webhook');await user.clear(name);await user.type(name,'Webhook comercial');await user.click(screen.getByRole('button',{name:'Salvar nome'}));await waitFor(()=>expect(mocked.renameWebhook).toHaveBeenCalledWith(item.id,'Webhook comercial'));await user.click(screen.getByRole('button',{name:'Desativar Leads Hub principal'}));await waitFor(()=>expect(mocked.setWebhookEnabled).toHaveBeenCalledWith(item.id,false));await user.click(screen.getByRole('button',{name:'Excluir Leads Hub principal'}));expect(screen.getByRole('alertdialog')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Excluir webhook'}));await waitFor(()=>expect(mocked.deleteWebhook).toHaveBeenCalledWith(item.id))});
 });
