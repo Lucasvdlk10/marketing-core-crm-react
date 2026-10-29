@@ -21,10 +21,11 @@ describe('ProfilePage',()=>{
   });
 
   it('loads and saves the authenticated user profile through its RPC',async()=>{
-    const saved={user_id:'user-1',full_name:'Marina Souza',phone:'31988887777',job_title:'Closer',avatar_data:null,updated_at:'2026-10-28T01:00:00Z'};
+    const avatar='data:image/png;base64,cGVyZmls';
+    const saved={user_id:'user-1',full_name:'Marina Souza',phone:'31988887777',job_title:'Closer',avatar_data:avatar,updated_at:'2026-10-28T01:00:00Z'};
     rpc.mockImplementation(async(name:string,args:Record<string,unknown>)=>name==='core_my_profile_get'?{
       user_id:'user-1',full_name:'Pessoa Remota',phone:'31999990000',job_title:'SDR',avatar_data:null,updated_at:'2026-10-28T00:00:00Z'
-    }:name==='core_my_profile_save'?saved:{});
+    }:name==='core_my_profile_save'?[saved]:{});
     const onSaved=vi.fn();const user=userEvent.setup();
     render(<ProfilePage onSaved={onSaved}/>);
     const name=await screen.findByLabelText('Nome completo');
@@ -34,6 +35,9 @@ describe('ProfilePage',()=>{
     await user.click(screen.getByRole('button',{name:'Salvar perfil'}));
     expect(rpc).toHaveBeenCalledWith('core_my_profile_save',{p_full_name:'Marina Souza',p_phone:'31988887777',p_job_title:'Closer',p_avatar_data:null});
     expect(onSaved).toHaveBeenCalledWith(saved);
+    expect(screen.getByLabelText('Nome completo')).toHaveValue('Marina Souza');
+    expect(screen.getByLabelText('Telefone')).toHaveValue('31988887777');
+    expect(screen.getByRole('img',{name:'Prévia da foto de perfil'})).toHaveAttribute('src',avatar);
     expect(screen.getByText('Perfil atualizado com sucesso.')).toBeInTheDocument();
   });
 

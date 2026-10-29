@@ -16,7 +16,7 @@ import { ReportsPage } from "./pages/ReportsPage";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { TeamPage } from "./pages/TeamPage";
 import { SettingsPage, type CompanyProfile } from "./pages/SettingsPage";
-import { ProfilePage, type UserProfile } from "./pages/ProfilePage";
+import { ProfilePage, normalizeUserProfile, type UserProfile } from "./pages/ProfilePage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import {
   bootstrapRemoteCrm,
@@ -128,7 +128,7 @@ export function App() {
   useEffect(()=>{
     if(!session||!remoteReady||!crmApi){setUserProfile(null);return}
     let active=true;
-    crmApi.rpc('core_my_profile_get',{}).then(value=>{if(active)setUserProfile(value as UserProfile)}).catch(()=>{});
+    crmApi.rpc('core_my_profile_get',{}).then(value=>{if(active)setUserProfile(normalizeUserProfile(value))}).catch(()=>{});
     return()=>{active=false};
   },[session,remoteReady]);
   useEffect(() => {
