@@ -1,4 +1,4 @@
-import { render, screen,waitFor } from '@testing-library/react';
+import { render, screen,waitFor,within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter,useLocation } from 'react-router-dom';
 import { beforeEach,describe, expect, it,vi } from 'vitest';
@@ -69,5 +69,83 @@ describe('AppShell', () => {
     expect(screen.queryByRole('menuitem',{name:/Configurações/})).not.toBeInTheDocument();
     await user.click(screen.getByRole('menuitem',{name:/Editar perfil/}));
     expect(screen.getByTestId('current-location')).toHaveTextContent('/profile');
+  });
+
+  it('abre a navegação móvel pelo botão do cabeçalho',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    const toggle=screen.getByRole('button',{name:'Abrir menu de navegação'});
+    expect(toggle).toHaveAttribute('aria-expanded','false');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded','true');
+    expect(screen.getByTestId('primary-sidebar')).toHaveClass('open');
+    expect(screen.getByRole('button',{name:'Fechar menu'})).toBeInTheDocument();
+  });
+
+  it('fecha a navegação móvel após escolher uma página',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter initialEntries={['/dashboard']}><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><LocationProbe/></AppShell></MemoryRouter>);
+    await user.click(screen.getByRole('button',{name:'Abrir menu de navegação'}));
+    await user.click(screen.getByTestId('nav-contacts'));
+    expect(screen.getByTestId('current-location')).toHaveTextContent('/contacts');
+    expect(screen.getByTestId('primary-sidebar')).not.toHaveClass('open');
+    expect(screen.getByRole('button',{name:'Abrir menu de navegação'})).toHaveAttribute('aria-expanded','false');
+  });
+
+  it('fecha a navegação móvel com Escape',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    await user.click(screen.getByRole('button',{name:'Abrir menu de navegação'}));
+    await user.keyboard('{Escape}');
+    expect(screen.getByTestId('primary-sidebar')).not.toHaveClass('open');
+    expect(screen.getByRole('button',{name:'Abrir menu de navegação'})).toHaveAttribute('aria-expanded','false');
+  });
+
+  it('fecha o drawer pelo botão de fechar interno',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    const toggle=screen.getByRole('button',{name:'Abrir menu de navegação'});
+    await user.click(toggle);
+    expect(document.body.style.overflow).toBe('hidden');
+    await user.click(within(screen.getByTestId('primary-sidebar')).getByRole('button',{name:'Fechar menu de navegação'}));
+    expect(screen.getByTestId('primary-sidebar')).not.toHaveClass('open');
+    expect(toggle).toHaveAttribute('aria-expanded','false');
+    expect(toggle).toHaveFocus();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('fecha a navegação móvel ao tocar fora do menu',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    await user.click(screen.getByRole('button',{name:'Abrir menu de navegação'}));
+    await user.click(screen.getByRole('button',{name:'Fechar menu'}));
+    expect(screen.getByTestId('primary-sidebar')).not.toHaveClass('open');
+  });
+
+  it('move o foco para o drawer e mantém a navegação por teclado dentro dele',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    await user.click(screen.getByRole('button',{name:'Abrir menu de navegação'}));
+    const sidebar=screen.getByTestId('primary-sidebar');
+    const close=within(sidebar).getByRole('button',{name:'Fechar menu de navegação'});
+    const lastLink=within(sidebar).getByTestId('nav-settings');
+    expect(sidebar).toHaveAttribute('role','dialog');
+    expect(close).toHaveFocus();
+    lastLink.focus();
+    await user.tab();
+    expect(close).toHaveFocus();
+    await user.tab({shift:true});
+    expect(lastLink).toHaveFocus();
+  });
+
+  it('abre e foca a busca global no cabeçalho mobile',async()=>{
+    const user=userEvent.setup();
+    render(<MemoryRouter><AppShell workspace={{name:'Marketing Core',tagline:'Estratégia, dados e crescimento',logoUrl:'./assets/core-mark.svg'}} userName="Lucas"><div>conteúdo</div></AppShell></MemoryRouter>);
+    const toggle=screen.getByRole('button',{name:'Abrir busca global'});
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded','true');
+    expect(screen.getByRole('textbox',{name:'Busca global'})).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button',{name:'Abrir busca global'})).toHaveAttribute('aria-expanded','false');
   });
 });

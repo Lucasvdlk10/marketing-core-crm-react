@@ -1,5 +1,5 @@
-import { Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Search, X, Menu } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NotificationMenu } from "./NotificationMenu";
 import { UserMenu } from "./UserMenu";
 import { type MockLead } from "../../data/mockCrmData";
@@ -31,17 +31,25 @@ export function Header({
   userAvatar,
   role,
   onLogout,
+  mobileNavOpen = false,
+  onMenuClick,
 }: {
   userName: string;
   userAvatar?: string | null;
   role: "admin" | "employee";
   onLogout: () => void;
+  mobileNavOpen?: boolean;
+  onMenuClick?: () => void;
 }) {
   const canSearch = currentCapability("contacts.read");
   const [query, setQuery] = useState("");
   const [selectedLead, setSelectedLead] = useState<MockLead | null>(null);
   const [focused, setFocused] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [leads, setLeads] = useState<MockLead[]>(getEffectiveLeads);
+  useEffect(() => { if (mobileSearchOpen) searchInputRef.current?.focus(); }, [mobileSearchOpen]);
+  useEffect(() => { if (mobileNavOpen) { setMobileSearchOpen(false); setFocused(false); } }, [mobileNavOpen]);
   useEffect(
     () => subscribeLeadRecords(() => setLeads(getEffectiveLeads())),
     [],
@@ -57,21 +65,33 @@ export function Header({
   const openLead = (lead: MockLead) => {
     setSelectedLead(lead);
     setFocused(false);
+    setMobileSearchOpen(false);
   };
   return (
     <>
-      <header className="topbar">
-        <div className="crumb">
-          <strong>CRM</strong>
-          <span>/</span>
-          <span className="padded-crumb">Operação comercial</span>
+      <header className={`topbar ${mobileSearchOpen?'mobile-search-active':''}`}>
+        <div className="topbar-start">
+          <button type="button" className="sidebar-toggle" aria-label={mobileNavOpen?"Fechar menu de navegação":"Abrir menu de navegação"} aria-expanded={mobileNavOpen} aria-controls="primary-navigation" onClick={onMenuClick}>
+            <Menu size={20} aria-hidden="true"/>
+          </button>
+          <div className="crumb">
+            <strong>CRM</strong>
+            <span>/</span>
+            <span className="padded-crumb">Operação comercial</span>
+          </div>
         </div>
         <div className="topbar-end">
           {canSearch && (
-            <div className="global-search-wrap">
+            <>
+              <button type="button" className="mobile-search-toggle" aria-label={mobileSearchOpen?"Fechar busca global":"Abrir busca global"} aria-expanded={mobileSearchOpen} aria-controls="global-search-input" onClick={()=>setMobileSearchOpen(open=>!open)}>
+                {mobileSearchOpen?<X size={18}/>:<Search size={18} />}
+              </button>
+              <div className={`global-search-wrap ${mobileSearchOpen?"mobile-search-open":""}`}>
               <label className="top-search">
                 <Search size={17} />
                 <input
+                  id="global-search-input"
+                  ref={searchInputRef}
                   aria-label="Busca global"
                   placeholder="Buscar nome, telefone, e-mail, CPF ou CNPJ..."
                   value={query}
@@ -83,7 +103,7 @@ export function Header({
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && results[0])
                       openLead(results[0]);
-                    if (event.key === "Escape") setFocused(false);
+                    if (event.key === "Escape") { setFocused(false); setMobileSearchOpen(false); }
                   }}
                 />
                 {query && (
@@ -143,8 +163,9 @@ export function Header({
                 </div>
               )}
             </div>
-          )}
-          <NotificationMenu />
+            </>
+            )}
+            <NotificationMenu />
           <UserMenu
             userName={userName}
             avatarUrl={userAvatar}

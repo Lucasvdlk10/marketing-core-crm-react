@@ -12,6 +12,7 @@ import {
   Link,
   UserCog,
   Settings,
+  X,
 } from "lucide-react";
 const groups = [
   [
@@ -57,13 +58,18 @@ export function Sidebar({
   workspace,
   role,
   visibleModules,
+  open = false,
+  onNavigate,
 }: {
   workspace: WorkspaceIdentity;
   role: "admin" | "employee";
   visibleModules?:ReadonlySet<string>;
+  open?:boolean;
+  onNavigate?:()=>void;
 }) {
   return (
-    <aside className="sidebar">
+    <aside id="primary-navigation" data-testid="primary-sidebar" role={open?"dialog":undefined} aria-modal={open?true:undefined} aria-label="Navegação principal" tabIndex={-1} className={`sidebar ${open?"open":""}`}>
+      {open&&<button type="button" className="sidebar-close" aria-label="Fechar menu de navegação" onClick={onNavigate}><X size={19} aria-hidden="true"/></button>}
       <div className="brand">
         <img src="./assets/core-mark.svg" alt="Marketing Core" />
         <div>
@@ -94,6 +100,7 @@ export function Sidebar({
                   data-testid={`nav-${id}`}
                   key={id}
                   to={`/${id}`}
+                  onClick={onNavigate}
                   className={({ isActive }) =>
                     `nav-item ${isActive ? "active" : ""}`
                   }
