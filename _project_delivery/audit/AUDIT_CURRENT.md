@@ -9,7 +9,7 @@
 
 ## Veredito executivo
 
-**Estado: AMARELO — dashboard personalizável, filtros, drawer, equipes, metas e inteligência foram implementados e validados localmente; migration aplicada no staging; falta commit/push e verificação do deploy público. Automação por lista, funções personalizadas, importação, paginação e histórico permanecem validados.**
+**Estado: AMARELO — dashboard personalizável e relatório de motivos de perda foram implementados e validados localmente; migrations `202610300005` e `202610300006` aplicadas no staging; falta commit/push desta frente e verificação do deploy público.**
 
 ### Atualização — importação de leads
 

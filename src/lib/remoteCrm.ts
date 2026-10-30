@@ -40,6 +40,7 @@ export type RemoteDeal = {
   name: string;
   value: string;
   status: "open" | "won" | "lost";
+  loss_reason: string | null;
   owner_id: string | null;
   expected_close: string | null;
   notes: string | null;

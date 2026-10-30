@@ -73,3 +73,12 @@
 - O dashboard passou a buscar `owner_id` dos contatos para filtrar por equipe corretamente.
 - Validações: Dashboard 5/5; suíte completa 178/178; TypeScript, build, audit de dependências e DB lint aprovados; 0 vulnerabilidades.
 - Pendência conhecida: o build mantém o aviso preexistente de `config.js` sem `type="module"` e o chunk inicial aumentou pela biblioteca de grid; não bloqueiam execução.
+
+## 30/10/2026 — Relatório de motivos de perda
+
+- Adicionado `core_deals.loss_reason` com migration `202610300006_loss_reason_reporting.sql`.
+- Pipeline remoto agora persiste o motivo estruturado ao marcar uma negociação como perdida.
+- Relatórios exibem barras ordenadas por quantidade, percentual, tooltip nativo com motivo/quantidade/percentual e drawer inline com os leads da barra selecionada.
+- Impacto financeiro soma os valores reais das negociações perdidas no período.
+- Filtro inclui hoje, ontem, 7, 15, 30, 90 dias, mês atual, mês anterior e período personalizado.
+- Validações: ReportsPage 5/5, typecheck e build aprovados; migration aplicada no staging.

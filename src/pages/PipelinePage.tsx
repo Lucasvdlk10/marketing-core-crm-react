@@ -543,6 +543,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
       status: "open" | "won" | "lost";
       stageId?: string;
       notes?: string;
+      loss_reason?: string;
     },
   ) => {
     if (isRemoteMode()) {
@@ -568,6 +569,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
         value: String(updated.value),
         stage_id: stageId,
         status: remoteOutcome?.status || stage!.outcome,
+        loss_reason: remoteOutcome?.loss_reason || updated.lossReason || null,
         expected_close: updated.nextActionDate || null,
         notes: remoteOutcome?.notes ?? (updated.nextAction || null),
       });
@@ -738,6 +740,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
           ? {
               status: "lost",
               stageId: currentStage?.id,
+              loss_reason: lossReason,
               notes: `Motivo da perda: ${lossReason}${notes ? `\nObservação: ${notes}` : ""}`,
             }
           : undefined,
