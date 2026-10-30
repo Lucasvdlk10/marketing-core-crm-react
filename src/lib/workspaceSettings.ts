@@ -67,13 +67,19 @@ export const isRemoteRolePermissionAvailable=(role:string,_permission:RemoteAcce
 export async function loadRemoteAccessRoles():Promise<RemoteAccessRole[]>{
   if(!crmApi)return[];
   const w=getRemoteWorkspaceId();if(!w)return[];
-  const rows=await crmApi.request(`/rest/v1/core_role_permissions?select=role,permission,enabled&workspace_id=eq.${encodeURIComponent(w)}`) as {role:string;permission:string;enabled:boolean}[];
-  return roleDefinitions.map(role=>({id:role.id,name:role.name,protected:'protected'in role&&role.protected,permissions:role.id==='owner'?allPermissions:(Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]).filter(([,required])=>required.every(permission=>rows.find(row=>row.role===role.id&&row.permission===permission)?.enabled===true)).map(([key])=>key)}));
+  const [rows,custom]=await Promise.all([
+    crmApi.request(`/rest/v1/core_role_permissions?select=role,permission,enabled&workspace_id=eq.${encodeURIComponent(w)}`) as Promise<{role:string;permission:string;enabled:boolean}[]>,
+    crmApi.request(`/rest/v1/core_workspace_roles?select=id,name&workspace_id=eq.${encodeURIComponent(w)}&order=created_at.asc,id.asc`) as Promise<{id:string;name:string}[]>,
+  ]);
+  const definitions=[...roleDefinitions,...custom.map(role=>({...role,protected:false}))];
+  return definitions.map(role=>({id:role.id,name:role.name,protected:'protected'in role&&role.protected,permissions:role.id==='owner'?allPermissions:(Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]).filter(([,required])=>required.every(permission=>rows.find(row=>row.role===role.id&&row.permission===permission)?.enabled===true)).map(([key])=>key)}));
 }
 
 export async function saveRemoteAccessRoles(roles:RemoteAccessRole[]){
   if(!crmApi)throw Error('Supabase não configurado.');
   const w=getRemoteWorkspaceId();if(!w)throw Error('Workspace ativo não encontrado.');
+  const customRoles=roles.filter(role=>role.id.startsWith('custom-')).map(role=>({id:role.id,name:role.name.trim()}));
+  await crmApi.rpc('core_workspace_roles_replace',{w,p_roles:customRoles});
   for(const role of roles.filter(item=>!item.protected))for(const[key,permissions]of Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]){
 
     for(const permission of permissions){

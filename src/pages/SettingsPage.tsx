@@ -31,6 +31,7 @@ import { getLeadTags, saveLeadTags, type LeadTagConfig } from "../lib/leadTags";
 import {getLeadSources,saveLeadSources} from "../lib/leadSources";
 import {loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
 import {crmApi} from "../lib/api";
+import {currentCapability} from "../lib/effectivePermissions";
 export type CompanyProfile = { name: string; tagline: string; logoUrl: string };
 export function SettingsPage({
   profile,
@@ -76,6 +77,7 @@ export function SettingsPage({
   const [leadSourcesSaved,setLeadSourcesSaved]=useState(false);
   const [leadSourcesError,setLeadSourcesError]=useState("");
   const [remoteSettingsError,setRemoteSettingsError]=useState("");
+  const canManageRoles=currentCapability('roles.manage');
   useEffect(() => setDraft(profile), [profile]);
   useEffect(()=>{if(!authenticated)return;let active=true;Promise.all([loadRemoteCommercialSettings(),loadRemoteAccessRoles()]).then(([commercial,roles])=>{if(!active)return;setLossReasons(commercial.lossReasons);setDealActions(commercial.dealActions);setLeadSources(commercial.leadSources||getLeadSources());if(roles.length)setAccessRoles(roles as AccessRole[])}).catch(error=>{if(active)setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível carregar as configurações remotas.')});return()=>{active=false}},[authenticated]);
   const changePassword=async(event:FormEvent)=>{event.preventDefault();setPasswordFeedback("");setPasswordError("");if(newPassword!==confirmPassword){setPasswordError("As novas senhas não coincidem.");return}if(newPassword.length<8){setPasswordError("A nova senha deve ter pelo menos 8 caracteres.");return}if(!crmApi){setPasswordError("Supabase não configurado.");return}const email=String(crmApi.getSession()?.user?.email||"");if(!email){setPasswordError("Não foi possível identificar o e-mail da conta.");return}setPasswordSaving(true);try{await crmApi.signIn(email,currentPassword);await crmApi.updatePassword(newPassword);setCurrentPassword("");setNewPassword("");setConfirmPassword("");setPasswordFeedback("Senha alterada com sucesso.")}catch(error){const message=error instanceof Error?error.message:"Não foi possível alterar a senha.";setPasswordError(/invalid login credentials/i.test(message)?"Senha atual incorreta.":message)}finally{setPasswordSaving(false)}};
@@ -148,7 +150,7 @@ export function SettingsPage({
   const addAccessRole = () =>
     setAccessRoles((current) => [
       ...current,
-      { id: `role-${Date.now()}`, name: "Nova função", permissions: ["leads"] },
+      { id: `custom-${Date.now()}`, name: "Nova função", permissions: ["leads"] },
     ]);
   const updateAccessRole = (id: string, change: Partial<AccessRole>) =>
     setAccessRoles((current) =>
@@ -745,7 +747,7 @@ export function SettingsPage({
                     As permissões são configuradas por função, não por membro individual. Personalize a função aqui e atribua essa função ao usuário em Equipe.
                   </p>
                 </div>
-                <button className="btn secondary" disabled={authenticated} onClick={addAccessRole}>
+                <button className="btn secondary" disabled={!canManageRoles} onClick={addAccessRole}>
                   <Plus size={16} />
                   Nova função
                 </button>
@@ -757,15 +759,15 @@ export function SettingsPage({
                       <input
                         aria-label={`Nome da função ${role.name}`}
                         value={role.name}
-                        readOnly={role.protected||authenticated}
+                        readOnly={role.protected||!canManageRoles}
                         onChange={(event) =>
                           updateAccessRole(role.id, {
                             name: event.target.value,
                           })
                         }
                       />
-                      {role.protected||authenticated ? (
-                        <span>{role.protected?'ACESSO TOTAL':'FUNÇÃO PADRÃO'}</span>
+                      {role.protected||!canManageRoles ? (
+                        <span>{role.protected?'ACESSO TOTAL':'SOMENTE LEITURA'}</span>
                       ) : (
                         <button
                           aria-label={`Excluir função ${role.name}`}
@@ -791,7 +793,7 @@ export function SettingsPage({
                             type="checkbox"
                             aria-label={`${role.name}: ${label}`}
                             checked={role.permissions.includes(permission)}
-                            disabled={role.protected}
+                            disabled={role.protected||!canManageRoles}
                             onChange={() => togglePermission(role, permission)}
                           />
                           <span>{label}</span>
@@ -804,6 +806,7 @@ export function SettingsPage({
               <div className="settings-actions">
                 <button
                   className="btn primary"
+                  disabled={!canManageRoles}
                   onClick={async()=>{setRemoteSettingsError('');try{if(authenticated)setAccessRoles(await saveRemoteAccessRoles(accessRoles) as AccessRole[]);else{saveAccessRoles(accessRoles);setAccessRoles(getAccessRoles())}setAccessRolesSaved(true);setTimeout(()=>setAccessRolesSaved(false),2500)}catch(error){setRemoteSettingsError(error instanceof Error?error.message:'Não foi possível salvar os acessos.')}}}
                 >
                   <Save size={16} />

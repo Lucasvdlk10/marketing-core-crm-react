@@ -29,3 +29,12 @@
 - O histórico aparece abaixo da planilha modelo e registra arquivo, data, formato, quantidade importada e status. O registro de `teste1.csv` foi retroativamente incluído como 200/200 concluído.
 - Importações futuras registram automaticamente resultado concluído, parcial ou falho.
 - Validações: testes focados 40/40; suíte completa 170/170; typecheck e build aprovados; npm audit com 0 vulnerabilidades. O lint remoto apontou apenas um erro preexistente e não relacionado em `core_automation_choose_deal_assignee`.
+
+## 30/10/2026 — Proprietário pode criar funções personalizadas
+
+- Causa: a tela desabilitava `Nova função` para qualquer sessão autenticada, inclusive quando a associação real era `owner`.
+- O bloqueio genérico por `authenticated` foi substituído pela capacidade efetiva `roles.manage`; o proprietário recebe acesso total e pode adicionar, renomear, configurar permissões, excluir e salvar funções.
+- Criada a persistência tenant-scoped `core_workspace_roles` e a RPC `core_workspace_roles_replace`, protegida por validação de proprietário, RLS e auditoria.
+- A função Proprietário continua protegida e com acesso total.
+- Migration `202610300002_custom_workspace_roles.sql` aplicada no staging.
+- Validações: regressão RED→GREEN; testes de Configurações 6/6; suíte completa 170/170; typecheck, build e auditoria de dependências aprovados.

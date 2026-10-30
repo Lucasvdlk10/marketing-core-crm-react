@@ -52,6 +52,10 @@ describe("Settings autenticada e autorização", () => {
     expect(screen.getByRole("heading",{name:"Motivos de perda"})).toBeInTheDocument();
     await user.click(screen.getByRole("button",{name:"Equipe e acesso"}));
     expect(screen.getByRole("heading",{name:"Funções e níveis de acesso"})).toBeInTheDocument();
+    const newRole=screen.getByRole("button",{name:"Nova função"});
+    expect(newRole).toBeEnabled();
+    await user.click(newRole);
+    expect(screen.getByLabelText("Nome da função Nova função")).toBeEnabled();
   });
 
   it("usa o papel da associação real para proteger equipe e configurações", () => {
