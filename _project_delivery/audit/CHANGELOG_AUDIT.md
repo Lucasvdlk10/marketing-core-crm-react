@@ -113,5 +113,15 @@
 - Alterado `src/pages/DashboardPage.tsx`: classe mobile e persistência de layout desabilitada sob 700 px; drag/resize preservados e salvamento mantido acima do breakpoint.
 - Alterado `src/styles.css`: seletores scoping pela classe mobile no container medido convertem o grid em coluna fluida, liberam altura automática, quebram valores grandes e ajustam gráficos; sem classe mobile, os estilos desktop não são aplicados.
 - Novo `src/test/DashboardMobileLayout.test.tsx`: confirma todos os blocos e não salvar layout mobile, e que desktop permanece arrastável e persistido.
-- Validação: RED reproduzido antes da implementação; teste focado **7/7**, suíte serial **43/43 arquivos, 185/185 testes**, typecheck/build aprovados. Preview visual em 320, 390 e 576 px: sem overflow horizontal e cards sem corte; stress test com valor `R$ 151.563.514,00`. Em 1262 px: 4 colunas/itens absolutos, desktop preservado.
+- Validação: RED reproduzido antes da implementação; teste focado **7/7**, suíte serial **43/43 arquivos, 185/185 testes**, typecheck/build aprovados. Preview visual em 320, 390 e 576 px: sem overflow horizontal e cards sem corte; stress test com valor `R$ 151.563.514,00`. Em 1262 px, o preview isolado (sem `AppShell`) mostrou 4 colunas; depois o teste com shell revelou que isso não representa a largura útil real do dashboard nesse viewport (ver nota atual).
 - Arquivos temporários de preview removidos e Vite parado. Código commitado em `10efa8170e24f78ebffd6448040e76b4f6fb5038`, workflow `41120798607` concluído com sucesso e publicação verificada no bundle público (hashes listados na auditoria atual).
+
+## 30/10/2026 — Navegação e experiência mobile global
+
+- Causa confirmada após feedback: em até 870 px o CSS ocultava `.sidebar`, mas `Header` não renderizava `.sidebar-toggle` nem havia estado para abrir o drawer; a busca global também não tinha ação para revelar seu campo em telas estreitas.
+- `AppShell`, `Header` e `Sidebar` passaram a controlar drawer mobile com backdrop, botão X, rotas preservando os filtros de permissão, fechamento por navegação/Escape/backdrop, bloqueio de scroll, foco inicial/retorno e ciclo de Tab.
+- Busca global recebeu controle mobile expansível com foco imediato e Escape; cabeçalho sticky, safe areas e espaçamento compacto limitados aos breakpoints móveis. Nenhuma regra desktop existente foi alterada.
+- `src/test/AppShell.test.tsx` cobre botão, abertura, fechar por rota/X/backdrop/Escape, foco, scroll lock e busca; testes RED reproduziram a ausência de toggle, do close interno e do foco contido antes das implementações.
+- Navegador local: 320/390/576/700 px sem overflow; 390 px drawer aberto, navegação para `/reports`, restauração de foco/scroll e busca aberta/focada/fechada por Escape. 1262/1920 px controles móveis ocultos; a grade em 1262 no preview sem preferências reais mostrou o breakpoint `md` vazio preexistente, a confirmar com a preferência salva do workspace; 1920 px usou modo desktop.
+- Validação: AppShell **16/16**; suíte serial **43 arquivos/192 testes**; typecheck/build e `git diff --check` aprovados; npm audit: **0 vulnerabilidades**. Avisos de build `config.js` e chunk >500 kB continuam existentes.
+- Commit funcional local: `7421a2ff7cc4a47ec4136233e8b35742eb65db95`. Push/deploy público ainda pendentes nesta entrada.

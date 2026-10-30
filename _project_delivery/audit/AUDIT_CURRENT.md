@@ -2,20 +2,30 @@
 
 - **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`; código mobile no commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`, enviado a `origin/main`
+- **Branch:** `main`; correção funcional local no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`, ainda aguardando push e deploy. A melhoria anterior do Dashboard está publicada no commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`.
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: VERDE para a melhoria mobile do Dashboard — commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`; CI e deploy GitHub Pages concluídos no workflow `41120798607`. Assets públicos coincidem byte a byte com o build local. Desktop preservado.**
+**Estado: AMARELO para a correção global mobile. O drawer de navegação e a busca acessível por toque foram implementados e verificados localmente no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`; falta push e deploy compatível antes de declarar resolvido.**
 
 ### Mobile do Dashboard — 30/10/2026
 
 A captura do usuário mostrava cartões de indicadores com altura insuficiente, cortando valores e texto; o grid responsivo também herdava a posição/altura editável do desktop. Em viewport de até 700 px, o dashboard agora troca o grid absoluto do React Grid Layout por uma coluna fluida com cartões de altura automática, quebra segura de valores e gráficos com espaço; controles de arrastar/redimensionar ficam ocultos e as alterações mobile não sobrescrevem a preferência de layout desktop.
 
-Evidência visual local: viewport **320, 390 e 576 px**, 8 cartões visíveis/fluindo em coluna e `scrollWidth === clientWidth` (sem rolagem horizontal); valores de estresse como `R$ 151.563.514,00` aparecem sem corte. Em **1262 px**, o grid volta ao estilo desktop de 4 colunas, os itens continuam absolutos/arrastáveis e as regras novas não se aplicam.
+Evidência visual local do dashboard: viewport **320, 390 e 576 px**, 8 cartões em coluna e `scrollWidth === clientWidth` (sem rolagem horizontal); valores longos aparecem sem corte. No preview com o shell completo em **1920 px**, a classe mobile não se aplica e os controles móveis ficam ocultos. Observação: o teste isolado anterior de **1262 px** não incluía o `AppShell`; no shell completo sem preferências persistidas, o RGL usa o breakpoint `md` vazio e empilha cartões estreitos. Nenhuma regra nova altera o desktop; a disposição com as preferências reais do workspace precisa ser confirmada no CRM publicado antes de reafirmar o resultado específico de 4 colunas.
 
 Regressão focada: **7/7 testes**; suíte completa **185/185** (43 arquivos, execução serial); TypeScript e build aprovados. Build preserva avisos preexistentes de `config.js` e chunk acima de 500 kB. Workflow `41120798607` concluiu CI e deploy para o mesmo SHA `10efa8170e24f78ebffd6448040e76b4f6fb5038`. O CSS público `assets/index-bv0W2g4u.css` (SHA-256 `c998cdb505abb7bde7e32bfa3a5eefd03aa5b451fd9379b99e859fa7ba741cca`) e JS `assets/index-CrwP6ViJ.js` (SHA-256 `258229697496ae3e643714ee88ab6fc801cc8efdcba852b071efe542033c5b57`) respondem HTTP 200 e correspondem exatamente aos artefatos locais.
+
+### Navegação e shell mobile — 30/10/2026
+
+Após o usuário informar que não conseguia abrir o menu e que a experiência geral continuava ruim, a causa foi confirmada: em larguras até 870 px o CSS ocultava a sidebar, mas o componente `Header` não renderizava o botão `.sidebar-toggle` nem existia estado para abrir o drawer. A busca global também ficava sem campo visível/acessível em telas estreitas.
+
+Implementado localmente no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`: botão de menu com estado ARIA; drawer com todas as rotas já filtradas pelas permissões, backdrop e botão de fechar; fecha ao navegar, tocar fora, pressionar Escape; trava/restaura scroll e mantém foco por teclado dentro do drawer, retornando-o ao toggle ao fechar. A busca global ganhou botão mobile, expansão/foco do campo e fechamento com Escape. Cabeçalho sticky, safe areas e espaçamentos compactos aplicam-se somente no mobile; os seletores desktop não foram alterados.
+
+Evidência de navegador local: **320, 390, 576 e 700 px** sem overflow horizontal. Em 390 px o drawer foi aberto, mostrou as rotas, fechou ao navegar para `/reports`, liberou o scroll e devolveu foco ao botão; a busca abriu com o input focado, permaneceu dentro da largura e fechou com Escape. No desktop (1262/1920 px) o toggle móvel fica oculto; em 1920 px a classe de layout mobile não se aplica. Nenhum acesso ao banco ou mutação de dados foi feito.
+
+Regressões TDD: testes novos reproduziram a ausência do botão, da ação de fechar e do foco antes das respectivas correções. AppShell **16/16**, suíte serial **43 arquivos / 192 testes**, typecheck, build e `git diff --check` passaram; `npm audit --audit-level=moderate`: **0 vulnerabilidades**. Build mantém os avisos preexistentes de `config.js` e chunk >500 kB. Estado: commit funcional criado localmente; push e workflow de deploy ainda pendentes.
 
 ### Relatório de motivos de perda — 30/10/2026
 
