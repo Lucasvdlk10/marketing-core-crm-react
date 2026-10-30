@@ -2,12 +2,12 @@
 
 - **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`; correção funcional local no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`, ainda aguardando push e deploy. A melhoria anterior do Dashboard está publicada no commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`.
+- **Branch:** `main` limpa em `origin/main` no release commit `aa3d579bfbc7c357d3219bf922e3cc35031ae547`; inclui o commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95`. GitHub Pages workflow `41132042334` concluiu com sucesso nesse SHA.
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: AMARELO para a correção global mobile. O drawer de navegação e a busca acessível por toque foram implementados e verificados localmente no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`; falta push e deploy compatível antes de declarar resolvido.**
+**Estado: VERDE para a correção global mobile. O commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95` está no release `aa3d579bfbc7c357d3219bf922e3cc35031ae547`; CI e deploy GitHub Pages concluíram no workflow `41132042334`. CSS/JS públicos respondem HTTP 200 e seus hashes coincidem com `dist/`.**
 
 ### Mobile do Dashboard — 30/10/2026
 
@@ -25,7 +25,7 @@ Implementado localmente no commit `7421a2ff7cc4a47ec4136233e8b35742eb65db95`: bo
 
 Evidência de navegador local: **320, 390, 576 e 700 px** sem overflow horizontal. Em 390 px o drawer foi aberto, mostrou as rotas, fechou ao navegar para `/reports`, liberou o scroll e devolveu foco ao botão; a busca abriu com o input focado, permaneceu dentro da largura e fechou com Escape. No desktop (1262/1920 px) o toggle móvel fica oculto; em 1920 px a classe de layout mobile não se aplica. Nenhum acesso ao banco ou mutação de dados foi feito.
 
-Regressões TDD: testes novos reproduziram a ausência do botão, da ação de fechar e do foco antes das respectivas correções. AppShell **16/16**, suíte serial **43 arquivos / 192 testes**, typecheck, build e `git diff --check` passaram; `npm audit --audit-level=moderate`: **0 vulnerabilidades**. Build mantém os avisos preexistentes de `config.js` e chunk >500 kB. Estado: commit funcional criado localmente; push e workflow de deploy ainda pendentes.
+Regressões TDD: testes novos reproduziram a ausência do botão, da ação de fechar e do foco antes das respectivas correções. AppShell **16/16**, suíte serial **43 arquivos / 192 testes**, typecheck, build e `git diff --check` passaram; `npm audit --audit-level=moderate`: **0 vulnerabilidades**. Build mantém os avisos preexistentes de `config.js` e chunk >500 kB. O commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95` foi enviado dentro do release `aa3d579bfbc7c357d3219bf922e3cc35031ae547`; workflow `41132042334` concluiu com sucesso no SHA do release. Assets públicos `assets/index-CMeS1aXy.css` e `assets/index-mQVsila3.js` responderam HTTP 200; hashes SHA-256 `6408ddd8bcf1383431fabd54d92449d65ce3e5645632a96b9f1e7b7ac4e9b44b` e `cd7975ac52bc4408d8239bceb28638aced01244b751bd485f22c5bac82a1562c`, idênticos aos arquivos em `dist/`. Marcadores do menu e busca foram encontrados nos assets publicados.
 
 ### Relatório de motivos de perda — 30/10/2026
 
