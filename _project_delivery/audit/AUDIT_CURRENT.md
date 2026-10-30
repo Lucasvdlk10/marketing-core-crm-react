@@ -2,12 +2,12 @@
 
 - **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`; HEAD base `8a24aab1681b82af69e44b503b6f7af93bc129c0`; alterações locais da correção ainda não commitadas
+- **Branch:** `main`; commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c` pushed to `origin/main`
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: AMARELO — correção específica do Relatório de motivos de perda implementada localmente; migration `202610300008_loss_timestamp.sql` aplicada e confirmada no staging `L.E.I.A CRM Staging`; publicação frontend pendente.**
+**Estado: VERDE para a correção do Relatório de motivos de perda — migration aplicada no staging, 183/183 testes passaram no workflow CI, build e deploy GitHub Pages concluídos para o commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c`; bundle público foi lido e verificado.**
 
 ### Relatório de motivos de perda — 30/10/2026
 
@@ -15,11 +15,11 @@ A causa foi confirmada no caminho de leitura: o bootstrap remoto de `core_deals`
 
 A migration `202610300008_loss_timestamp.sql` foi aplicada ao projeto remoto cujo nome e ref foram conferidos como `L.E.I.A CRM Staging` / `nsrwjtgzluadienwtnxt`. Leitura posterior confirmou a coluna `lost_at`, **4/4** negociações perdidas com timestamp e nenhum registro perdido sem data. Consulta agregada encontrou uma perda de **R$ 2.000,00** em 30/10/2026 com motivo `Sem prioridade no momento`, compatível com o registro informado pelo usuário; nenhum nome/PII foi copiado para esta auditoria.
 
-Validações: testes focados **21/21**, TypeScript aprovado, build aprovado (mantém avisos conhecidos de `config.js` e chunk acima de 500 kB), `npm audit` com **0 vulnerabilidades** e DB lint remoto com exit 0 e avisos preexistentes em funções não relacionadas. A suíte completa com workers padrão teve **174/183** aprovados e 9 falhas/timeout fora da área de relatórios; a repetição no modo serial igual ao workflow CI está em andamento.
+Validações: testes focados **21/21**, TypeScript aprovado, build local aprovado (avisos conhecidos de `config.js` e chunk acima de 500 kB), `npm audit` com **0 vulnerabilidades** e DB lint remoto com exit 0 e avisos preexistentes em funções não relacionadas. A execução do workflow para `b33bfe848bf743f3cac8927e66cc61b8d871cb3c` passou **42 arquivos / 183 testes**, build e deploy. O bundle público `assets/index-CBeWXIWg.js` respondeu HTTP 200, SHA-256 `a093adb7c7f695a8ef841e717a50704484ba082ca22b85c0f61022d34f30db0c`, com marcadores `lost_at`, `loss_reason`, `Período personalizado` e `Distribuição dos motivos`. A execução local paralela teve 174/183 por timeouts intermitentes em áreas não relacionadas; a execução serial do CI passou sem falhas.
 
-### Publicação pendente
+### Implantação verificada
 
-A versão React corrigida ainda não foi commitada/enviada ao GitHub Pages. Não afirmar que a interface pública mudou até validar workflow concluído para o SHA correto e verificar os assets/página pública.
+O commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c` foi enviado para `main`; o workflow `41108027237` concluiu com sucesso e publicou a aplicação no GitHub Pages. O bundle e os marcadores da funcionalidade foram lidos de volta após o deploy.
 
 ### Atualização histórica — importação de leads
 

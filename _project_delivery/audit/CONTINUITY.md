@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-Relatório de motivos de perda em correção: base `8a24aab`; alterações locais não commitadas. Causa demonstrada no snapshot: query de `core_deals` omitia `loss_reason`, e período filtrava `created_at`. Migration `202610300008_loss_timestamp.sql` já aplicada e confirmada no `L.E.I.A CRM Staging`; dados agregados reais mostraram uma negociação de R$ 2.000 perdida em 30/10/2026. Testes focados 21/21, typecheck/build/audit aprovados. Execução de suíte em modo serial (igual a CI) pendente. Próxima ação: obter resultado serial, então revisar diff, commit/push e validar o deploy GitHub Pages por SHA e asset.
+Relatório de motivos de perda corrigido no commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c`, enviado para `origin/main` e publicado pelo workflow `41108027237`. Causa: bootstrap de `core_deals` omitia `loss_reason` e relatório filtrava `created_at`. Migration `202610300008_loss_timestamp.sql` aplicada/confirmada no `L.E.I.A CRM Staging`; consulta agregada confirmou a perda real de R$ 2.000 em 30/10/2026. CI: 42 arquivos/183 testes, build e deploy aprovados. Bundle público verificado com SHA-256 `a093adb7c7f695a8ef841e717a50704484ba082ca22b85c0f61022d34f30db0c`. Próximo: aguardar feedback do usuário; não alterar outros relatórios sem pedido.
 
 A continuidade anterior registrava a Visão geral expandida para dashboard personalizável, filtro global de datas, escopo por equipe, drawer de indicadores, velocidade do pipeline, metas e inteligência de vendas. A migration `202610300005_personalized_sales_dashboard.sql` está aplicada no staging. Automações por lista, funções personalizadas, importação, paginação e histórico permanecem validados. Última suíte: 178/178; DB lint limpo.
 
