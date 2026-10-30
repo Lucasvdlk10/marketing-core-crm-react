@@ -90,3 +90,10 @@
 - Relatório exibe horas por status, uso total versus período esperado, ranking implícito por tempo online e filtro por equipes personalizadas.
 - Clique no nome consulta e mostra as entradas, saídas e mudanças de status do colaborador no período.
 - Validações: ReportsPage 5/5, typecheck e migration `202610300007_presence_usage_history.sql` aplicados no staging.
+
+## 30/10/2026 — Consolidação visual e filtros dos relatórios
+
+- Filtro de equipe do relatório de presença passou a filtrar efetivamente os usuários pelos grupos do workspace.
+- Tabela de presença passou a formatar duração em horas/minutos e exportar o recorte selecionado.
+- Confirmado front-end React 18.3.1 + TypeScript + Vite + React Router; a sessão de Relatórios é composta por `ReportsPage.tsx` e componentes React.
+- O deploy do commit `b410909` foi reexecutado, mas o GitHub Pages respondeu HTTP 500 na criação da implantação; o código permanece no GitHub e aguarda nova publicação.

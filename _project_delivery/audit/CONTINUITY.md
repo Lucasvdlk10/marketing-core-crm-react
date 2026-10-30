@@ -17,6 +17,8 @@ Relatórios de motivos de perda receberam gráfico de barras ordenado, filtro de
 
 O Relatório de Presença passou a registrar login, logout, heartbeat e trocas de status em `core_presence_events`, com métricas por status, horas de uso versus período esperado, filtro de equipes e detalhe diário por colaborador. A migration `202610300007_presence_usage_history.sql` foi aplicada no staging.
 
+O filtro de equipe agora é aplicado no cliente usando os grupos reais retornados pelo snapshot do workspace; o front-end permanece React 18.3.1. A publicação do commit `b410909` depende de nova tentativa do GitHub Pages após erro 500 do provedor.
+
 ## Atualização contínua
 
 Após qualquer alteração relevante:
