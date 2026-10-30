@@ -138,6 +138,7 @@ export type RemoteAutomation = {
   updated_at: string;
 };
 export type RemoteRolePermission={role:string;permission:string;enabled:boolean};
+export type RemoteImportHistory={id:string;workspace_id:string;requested_by:string;file_name:string;source_type:string;total_rows:number;imported_rows:number;failed_rows:number;status:'COMPLETED'|'PARTIAL'|'FAILED';created_at:string};
 export type RemoteSnapshot = {
   workspace: RemoteWorkspace;
   membership: RemoteMember;
@@ -150,11 +151,13 @@ export type RemoteSnapshot = {
   contactTags: RemoteContactTag[];
   notifications: RemoteNotification[];
   members: Array<{ user_id: string; full_name: string }>;
+  teamGroups: Array<{id:string;name:string;member_ids:string[]}>;
   campaigns: RemoteCampaign[];
   segmentLists: RemoteSegmentList[];
   segmentMembers: RemoteSegmentMember[];
   automations: RemoteAutomation[];
   rolePermissions:RemoteRolePermission[];
+  importHistory:RemoteImportHistory[];
   summary: Record<string, unknown> | null;
 };
 
@@ -249,11 +252,13 @@ export async function bootstrapRemoteCrm(
     contactTags,
     notifications,
     members,
+    teamGroups,
     campaigns,
     segmentLists,
     segmentMembers,
     automations,
     rolePermissions,
+    importHistory,
     summary,
   ] = await Promise.all([
     select<RemoteContact>(
@@ -291,6 +296,7 @@ export async function bootstrapRemoteCrm(
     crmApi.rpc("core_member_display_names", { w }) as Promise<
       Array<{ user_id: string; full_name: string }>
     >,
+    crmApi.rpc("core_team_groups", { w }) as Promise<Array<{id:string;name:string;member_ids:string[]}>>,
     select<RemoteCampaign>(
       "core_campaigns",
       `select=id,workspace_id,name,channel,budget,spent,status,start_date,end_date,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
@@ -307,6 +313,7 @@ export async function bootstrapRemoteCrm(
       ? crmApi.rpc("core_automation_list", { p_workspace: w }) as Promise<RemoteAutomation[]>
       : Promise.resolve([] as RemoteAutomation[]),
     select<RemoteRolePermission>("core_role_permissions",`select=role,permission,enabled&workspace_id=eq.${encode(w)}&role=eq.${encode(membership.role)}`),
+    select<RemoteImportHistory>("core_lead_import_history",`select=id,workspace_id,requested_by,file_name,source_type,total_rows,imported_rows,failed_rows,status,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc&limit=50`),
     crmApi.rpc("core_dashboard_summary", { p_workspace: w }) as Promise<Record<
       string,
       unknown
@@ -324,11 +331,13 @@ export async function bootstrapRemoteCrm(
     contactTags,
     notifications,
     members,
+    teamGroups,
     campaigns,
     segmentLists,
     segmentMembers,
     automations,
     rolePermissions,
+    importHistory,
     summary,
   });
 }

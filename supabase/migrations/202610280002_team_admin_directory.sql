@@ -1,5 +1,4 @@
 begin;
-
 create or replace function public.core_team_member_directory(w uuid)
 returns table(user_id uuid, full_name text, email text)
 language plpgsql stable security definer set search_path='' as $$
@@ -17,7 +16,6 @@ begin
   where m.workspace_id=w
   order by m.joined_at asc;
 end $$;
-
 create or replace function public.core_team_update_member_profile(
   w uuid,
   p_user uuid,
@@ -41,10 +39,8 @@ begin
   insert into core_private.platform_audit(actor_id,action,workspace_id,metadata)
   values(auth.uid(),'member_profile_updated',w,pg_catalog.jsonb_build_object('user_id',p_user,'active',p_active,'role',p_role));
 end $$;
-
 revoke all on function public.core_team_member_directory(uuid) from public,anon,authenticated;
 revoke all on function public.core_team_update_member_profile(uuid,uuid,text,text,boolean) from public,anon,authenticated;
 grant execute on function public.core_team_member_directory(uuid) to authenticated;
 grant execute on function public.core_team_update_member_profile(uuid,uuid,text,text,boolean) to authenticated;
-
 commit;

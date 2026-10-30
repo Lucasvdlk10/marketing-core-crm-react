@@ -192,6 +192,7 @@ describe("authenticated remote adapter", () => {
       {id:'stage',kind:'stage' as const,label:'Mover etapa',x:4,y:4,stageConfig:{stageId:'stage-1',stageName:'Qualificação'}},
       {id:'tag',kind:'tag' as const,label:'Adicionar tag',x:5,y:5,tagName:'VIP'},
       {id:'deal',kind:'deal' as const,label:'Criar negociação',x:6,y:6,dealConfig:{assigneeId:'user-1',assigneeLabel:'Pessoa Remota',pipelineId:'pipeline-1',pipelineName:'Pipeline comercial',stageId:'stage-1',stageName:'Qualificação'}},
+      {id:'team-deal',kind:'deal' as const,label:'Criar negociação',x:6,y:7,dealConfig:{assigneeId:'team-1',assigneeLabel:'Equipe Vendas',assigneeType:'team' as const,pipelineId:'pipeline-1',pipelineName:'Pipeline comercial',stageId:'stage-1',stageName:'Qualificação',distribution:[{userId:'user-1',label:'Ana',percentage:70},{userId:'user-2',label:'Bia',percentage:30}]}},
       {id:'source-condition',kind:'condition' as const,label:'Condição',x:7,y:7,conditionConfig:{subtype:'SOURCE_EQUALS' as const,value:'Indicação'}},
       {id:'campaign-condition',kind:'condition' as const,label:'Condição',x:8,y:8,conditionConfig:{subtype:'CAMPAIGN_EQUALS' as const,value:'Black Friday'}},
       {id:'stage-condition',kind:'condition' as const,label:'Condição',x:9,y:9,conditionConfig:{subtype:'STAGE_EQUALS' as const,stageId:'stage-2',stageName:'Proposta'}},
@@ -205,10 +206,11 @@ describe("authenticated remote adapter", () => {
       {id:'stage',type:'action',subtype:'MOVE_STAGE',config:{stage_id:'stage-1'}},
       {id:'tag',type:'action',subtype:'ADD_TAG',config:{tag_name:'VIP'}},
       {id:'deal',type:'action',subtype:'CREATE_DEAL',config:{owner_id:'user-1',pipeline_id:'pipeline-1',stage_id:'stage-1'}},
+      {id:'team-deal',type:'action',subtype:'CREATE_DEAL',config:{team_id:'team-1',distribution:[{user_id:'user-1',percentage:70},{user_id:'user-2',percentage:30}],pipeline_id:'pipeline-1',stage_id:'stage-1'}},
       {id:'source-condition',type:'condition',subtype:'SOURCE_EQUALS',config:{value:'Indicação'}},
       {id:'campaign-condition',type:'condition',subtype:'CAMPAIGN_EQUALS',config:{value:'Black Friday'}},
       {id:'stage-condition',type:'condition',subtype:'STAGE_EQUALS',config:{stage_id:'stage-2'}},
     ]);
-    expect(automationGraphToUi(graph).nodes).toMatchObject(nodes.map(node=>node.kind==='stage'?{...node,stageConfig:{stageId:node.stageConfig.stageId}}:node.kind==='deal'?{...node,dealConfig:{...node.dealConfig,assigneeLabel:'',pipelineName:'',stageName:''}}:node.kind==='condition'&&node.conditionConfig.subtype==='STAGE_EQUALS'?{...node,conditionConfig:{subtype:'STAGE_EQUALS',stageId:node.conditionConfig.stageId}}:node));
+    expect(automationGraphToUi(graph).nodes).toMatchObject(nodes.map(node=>node.kind==='stage'?{...node,stageConfig:{stageId:node.stageConfig.stageId}}:node.kind==='deal'?{...node,dealConfig:{...node.dealConfig,assigneeLabel:'',distribution:node.dealConfig.distribution?.map(row=>({...row,label:''})),pipelineName:'',stageName:''}}:node.kind==='condition'&&node.conditionConfig.subtype==='STAGE_EQUALS'?{...node,conditionConfig:{subtype:'STAGE_EQUALS',stageId:node.conditionConfig.stageId}}:node));
   });
 });

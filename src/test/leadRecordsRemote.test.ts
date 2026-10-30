@@ -75,9 +75,10 @@ describe('authenticated lead persistence',()=>{
   remote.insert
    .mockResolvedValueOnce({...remote.snapshot.contacts[0],id:'created-1',name:'Primeiro'})
    .mockResolvedValueOnce({...remote.snapshot.contacts[0],id:'created-2',name:'Segundo'});
-  await importLeadRecords([{...lead,id:'local-1',name:'Primeiro',phone:'31111111111',email:'primeiro@example.com'},{...lead,id:'local-2',name:'Segundo',phone:'31222222222',email:'segundo@example.com'}],progress);
+  await importLeadRecords([{...lead,id:'local-1',name:'Primeiro',phone:'31111111111',email:'primeiro@example.com'},{...lead,id:'local-2',name:'Segundo',phone:'31222222222',email:'segundo@example.com'}],progress,{fileName:'leads.csv',sourceType:'CSV',totalRows:2});
   expect(remote.insert).toHaveBeenNthCalledWith(1,'core_contacts',expect.objectContaining({name:'Primeiro'}),false);
   expect(remote.insert).toHaveBeenNthCalledWith(2,'core_contacts',expect.objectContaining({name:'Segundo'}),false);
+  expect(remote.insert).toHaveBeenNthCalledWith(3,'core_lead_import_history',expect.objectContaining({file_name:'leads.csv',source_type:'CSV',total_rows:2,imported_rows:2,failed_rows:0,status:'COMPLETED'}),false);
   expect(progress).toHaveBeenLastCalledWith(2,2);
   expect(remote.refresh).toHaveBeenCalledTimes(1);
  });

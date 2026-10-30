@@ -1,5 +1,4 @@
 begin;
-
 create or replace function public.core_presence_heartbeat(p_workspace uuid)
 returns jsonb language plpgsql security definer set search_path='' as $fn$
 declare result jsonb;
@@ -12,7 +11,6 @@ begin
  from public.core_user_presence p where p.workspace_id=p_workspace and p.user_id=auth.uid();
  return result;
 end $fn$;
-
 create or replace function public.core_presence_report(p_workspace uuid,p_since timestamptz default null)
 returns table(user_id uuid,full_name text,status text,updated_at timestamptz,is_online boolean)
 language plpgsql stable security definer set search_path='' as $fn$
@@ -33,8 +31,6 @@ begin
  where m.workspace_id=p_workspace and m.active
  order by lower(coalesce(nullif(btrim(up.full_name),''),au.email,'')),m.user_id;
 end $fn$;
-
 revoke all on function public.core_presence_heartbeat(uuid),public.core_presence_report(uuid,timestamptz) from public,anon;
 grant execute on function public.core_presence_heartbeat(uuid),public.core_presence_report(uuid,timestamptz) to authenticated;
-
 commit;

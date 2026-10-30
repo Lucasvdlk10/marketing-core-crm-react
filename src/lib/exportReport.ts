@@ -11,13 +11,12 @@ export function exportCsv(table:ExportTable,fileName:string){
   downloadBlob(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}),`${fileName}.csv`);
 }
 
-export async function exportXlsx(table:ExportTable,fileName:string){
-  const data=[
-    [{value:table.title,fontWeight:'bold' as const}],
-    [],
+export async function exportXlsx(table:ExportTable,fileName:string,options:{includeTitle?:boolean}={}){
+  const body=[
     table.headers.map(value=>({value,fontWeight:'bold' as const,backgroundColor:'#EAF0F8'})),
     ...table.rows.map(row=>row.map(value=>({value}))),
   ];
+  const data=options.includeTitle===false?body:[[{value:table.title,fontWeight:'bold' as const}],[],...body];
   await writeXlsxFile(data).toFile(`${fileName}.xlsx`);
 }
 

@@ -1,5 +1,4 @@
 begin;
-
 create table if not exists public.core_workspace_settings(
   workspace_id uuid not null references public.core_workspaces(id) on delete cascade,
   setting_key text not null check(setting_key in ('loss_reasons','deal_actions')),
@@ -10,7 +9,6 @@ create table if not exists public.core_workspace_settings(
 );
 alter table public.core_workspace_settings enable row level security;
 revoke all on public.core_workspace_settings from public,anon,authenticated;
-
 create or replace function public.core_workspace_setting_read(w uuid,p_key text)
 returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare result jsonb;
@@ -20,7 +18,6 @@ begin
   select value into result from public.core_workspace_settings where workspace_id=w and setting_key=p_key;
   return result;
 end $$;
-
 create or replace function public.core_workspace_setting_write(w uuid,p_key text,p_value jsonb)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare clean jsonb;
@@ -39,10 +36,8 @@ begin
   values(auth.uid(),'workspace_setting_updated',w,pg_catalog.jsonb_build_object('setting_key',p_key));
   return clean;
 end $$;
-
 revoke all on function public.core_workspace_setting_read(uuid,text) from public,anon,authenticated;
 revoke all on function public.core_workspace_setting_write(uuid,text,jsonb) from public,anon,authenticated;
 grant execute on function public.core_workspace_setting_read(uuid,text) to authenticated;
 grant execute on function public.core_workspace_setting_write(uuid,text,jsonb) to authenticated;
-
 commit;

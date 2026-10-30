@@ -14,6 +14,7 @@ import { getLossReasons } from "../lib/lossReasons";
 import { getDealActions, subscribeDealActions } from "../lib/dealActions";
 import { loadRemoteCommercialSettings } from "../lib/workspaceSettings";
 import { saveDealLossRecord } from "../lib/dealLossRecords";
+import {currentCapability} from '../lib/effectivePermissions';
 import {
   removeScheduledDealAction,
   saveScheduledDealAction,
@@ -130,6 +131,7 @@ const colors = [
 const normalizePhone = phoneIdentity;
 
 export function PipelinePage({ preview = false }: { preview?: boolean }) {
+  const canWrite=currentCapability('deals.write',preview);const canDelete=currentCapability('deals.delete',preview);
   const [pipelines, setPipelines] = useState<PipelineConfig[]>(getPipelines);
   const [selectedId, setSelectedId] = useState(() =>
     isRemoteMode()
@@ -380,6 +382,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     );
   }, [draft.phone, draft.email, availableLeads]);
   const openModal = () => {
+    if(!canWrite)return;
     setLinkedLead(null);
     setDealCreateError("");
     setDraft({
@@ -417,6 +420,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
   };
   const createDeal = async (event: FormEvent) => {
     event.preventDefault();
+    if(!canWrite)return;
     if (phoneMatch && !linkedLead) {
       setDealCreateError(
         "Vincule o lead encontrado antes de criar a negociação.",
@@ -520,6 +524,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     }
   };
   const beginEdit = () => {
+    if(!canWrite)return;
     if (!selectedDeal) return;
     setEditDraft({
       name: selectedDeal.name,
@@ -576,6 +581,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
   };
   const saveEdit = async (event: FormEvent) => {
     event.preventDefault();
+    if(!canWrite)return;
     if (!selectedDeal || !editDraft.name.trim()) return;
     const updated = {
       ...selectedDeal,
@@ -607,6 +613,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     }
   };
   const moveDeal = async (dealId: string, stage: string) => {
+    if(!canWrite)return;
     const deal = allDeals.find((item) => item.id === dealId);
     if (!deal || deal.stage === stage) {
       setDraggedDealId(null);
@@ -623,6 +630,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     }
   };
   const updateNextAction = async (nextAction: string) => {
+    if(!canWrite)return;
     if (!selectedDeal) return;
     const updated = { ...selectedDeal, nextAction };
     try {
@@ -645,6 +653,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     }
   };
   const updateNextActionDate = async (nextActionDate: string) => {
+    if(!canWrite)return;
     if (!selectedDeal) return;
     const updated = { ...selectedDeal, nextActionDate };
     try {
@@ -673,6 +682,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
     }
   };
   const markWon = async () => {
+    if(!canWrite)return;
     if (!selectedDeal) return;
     const remoteWonStage = remoteSnapshot?.stages.find(
       (stage) =>
@@ -707,6 +717,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
   };
   const confirmLoss = async (event: FormEvent) => {
     event.preventDefault();
+    if(!canWrite)return;
     if (!selectedDeal || !lossReason) return;
     const notes = lossNotes.trim();
     const currentStage = remoteSnapshot?.stages.find(
@@ -758,7 +769,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
       );
     }
   };
-  const deleteDeal=async()=>{if(!deleteConfirm)return;setDealDeleting(true);setDeleteError('');try{if(isRemoteMode())await remoteDelete('core_deals',deleteConfirm.id);else{setCreatedDeals(current=>current.filter(item=>item.id!==deleteConfirm.id));setHiddenDeals(current=>new Set([...current,deleteConfirm.id]));await removeScheduledDealAction(deleteConfirm.id)}setSelectedDeal(null);setDeleteConfirm(null);setEditingDeal(false);setFeedback('Negociação excluída com sucesso.');setTimeout(()=>setFeedback(''),2500)}catch(cause){setDeleteError(errorMessage(cause,'Não foi possível excluir a negociação.'))}finally{setDealDeleting(false)}};
+  const deleteDeal=async()=>{if(!canDelete||!deleteConfirm)return;setDealDeleting(true);setDeleteError('');try{if(isRemoteMode())await remoteDelete('core_deals',deleteConfirm.id);else{setCreatedDeals(current=>current.filter(item=>item.id!==deleteConfirm.id));setHiddenDeals(current=>new Set([...current,deleteConfirm.id]));await removeScheduledDealAction(deleteConfirm.id)}setSelectedDeal(null);setDeleteConfirm(null);setEditingDeal(false);setFeedback('Negociação excluída com sucesso.');setTimeout(()=>setFeedback(''),2500)}catch(cause){setDeleteError(errorMessage(cause,'Não foi possível excluir a negociação.'))}finally{setDealDeleting(false)}};
 
   return (
     <>
@@ -799,9 +810,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
               <Filter size={18} />
               {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
             </button>
-            <button className="btn primary" onClick={openModal}>
-              + Nova negociação
-            </button>
+            {canWrite&&<button className="btn primary" onClick={openModal}>+ Nova negociação</button>}
           </div>
         }
       />
@@ -862,7 +871,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                       className={`deal-card clickable-deal-card ${draggedDealId === item.id ? "dragging" : ""}`}
                       key={item.id}
                       data-testid={`deal-card-${item.id}`}
-                      draggable
+                      draggable={canWrite}
                       tabIndex={0}
                       role="button"
                       aria-label={`Abrir negociação ${item.name} de ${item.company}`}
@@ -1225,6 +1234,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                       type="button"
                       className="deal-edit-trigger"
                       aria-label="Editar negociação"
+                      disabled={!canWrite}
                       onClick={beginEdit}
                     >
                       <Pencil size={15} />
@@ -1234,6 +1244,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                       type="button"
                       className="deal-delete-trigger"
                       aria-label="Excluir negociação"
+                      disabled={!canDelete}
                       onClick={()=>{setDeleteError('');setDeleteConfirm(selectedDeal)}}
                     >
                       <Trash2 size={15} />
@@ -1247,6 +1258,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                     type="button"
                     className="deal-win-button"
                     aria-label="Marcar como ganha"
+                    disabled={!canWrite}
                     onClick={markWon}
                   >
                     <CircleCheck size={17} />
@@ -1256,6 +1268,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                     type="button"
                     className="deal-lose-button"
                     aria-label="Marcar como perdida"
+                    disabled={!canWrite}
                     onClick={() => {
                       setLossReason("");
                       setLossNotes("");
@@ -1295,6 +1308,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
                     <select
                       aria-label="Selecionar próxima ação"
                       value={selectedDeal.nextAction}
+                      disabled={!canWrite}
                       onChange={(event) => updateNextAction(event.target.value)}
                     >
                       {selectedDeal.nextAction &&

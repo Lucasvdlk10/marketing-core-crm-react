@@ -37,16 +37,22 @@ export async function saveRemoteCommercialSetting(key:'loss_reasons'|'deal_actio
 
 const roleDefinitions=[
   {id:'owner',name:'Proprietário',protected:true},
-  {id:'admin',name:'Administrador',protected:true},
+  {id:'admin',name:'Administrador'},
   {id:'marketing_manager',name:'Gestor de marketing'},
   {id:'sdr',name:'SDR'},
   {id:'closer',name:'Closer'},
   {id:'viewer',name:'Visualizador'},
 ] as const;
 const permissionMap={
-  leads:['contacts.read','contacts.write'],
-  pipeline:['deals.read','deals.write','pipeline.read'],
-  tasks:['tasks.read','tasks.write'],
+  leads:['contacts.read'],
+  leadsWrite:['contacts.write'],
+  leadsDelete:['contacts.delete'],
+  pipeline:['deals.read','pipeline.read'],
+  pipelineWrite:['deals.write'],
+  pipelineDelete:['deals.delete'],
+  tasks:['tasks.read'],
+  tasksWrite:['tasks.write'],
+  tasksDelete:['tasks.delete'],
   calendar:['calendar.manage'],
   reports:['reports.read'],
   automations:['automations.read','automations.write'],
@@ -54,34 +60,24 @@ const permissionMap={
   settings:['workspace.manage','roles.manage'],
 } as const;
 export type RemoteAccessPermission=keyof typeof permissionMap;
-const roleAllowed:Record<string,RemoteAccessPermission[]>={
-  owner:['leads','pipeline','tasks','calendar','reports','automations','team','settings'],
-  admin:['leads','pipeline','tasks','calendar','reports','automations','team','settings'],
-  marketing_manager:['leads','tasks','reports','automations'],
-  sdr:['leads','pipeline','tasks','calendar','reports'],
-  closer:['leads','pipeline','tasks','calendar','reports'],
-  viewer:['leads','pipeline','tasks','reports','automations'],
-};
+const allPermissions=Object.keys(permissionMap) as RemoteAccessPermission[];
 export type RemoteAccessRole={id:string;name:string;permissions:RemoteAccessPermission[];protected?:boolean};
-export const isRemoteRolePermissionAvailable=(role:string,permission:RemoteAccessPermission)=>roleAllowed[role]?.includes(permission)??false;
+export const isRemoteRolePermissionAvailable=(role:string,_permission:RemoteAccessPermission)=>role!=='owner';
 
 export async function loadRemoteAccessRoles():Promise<RemoteAccessRole[]>{
   if(!crmApi)return[];
   const w=getRemoteWorkspaceId();if(!w)return[];
   const rows=await crmApi.request(`/rest/v1/core_role_permissions?select=role,permission,enabled&workspace_id=eq.${encodeURIComponent(w)}`) as {role:string;permission:string;enabled:boolean}[];
-  return roleDefinitions.map(role=>({id:role.id,name:role.name,protected:'protected'in role&&role.protected,permissions:(Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]).filter(([key,required])=>roleAllowed[role.id].includes(key)&&required.every(permission=>rows.find(row=>row.role===role.id&&row.permission===permission)?.enabled!==false)).map(([key])=>key)}));
+  return roleDefinitions.map(role=>({id:role.id,name:role.name,protected:'protected'in role&&role.protected,permissions:role.id==='owner'?allPermissions:(Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]).filter(([,required])=>required.every(permission=>rows.find(row=>row.role===role.id&&row.permission===permission)?.enabled===true)).map(([key])=>key)}));
 }
 
 export async function saveRemoteAccessRoles(roles:RemoteAccessRole[]){
   if(!crmApi)throw Error('Supabase não configurado.');
   const w=getRemoteWorkspaceId();if(!w)throw Error('Workspace ativo não encontrado.');
   for(const role of roles.filter(item=>!item.protected))for(const[key,permissions]of Object.entries(permissionMap) as [RemoteAccessPermission,readonly string[]][]){
-    if(!roleAllowed[role.id]?.includes(key))continue;
+
     for(const permission of permissions){
-      try{await crmApi.rpc('core_team_set_permission',{w,p_role:role.id,p_permission:permission,p_enabled:role.permissions.includes(key)})}catch(error){
-        const message=error instanceof Error?error.message:'';
-        if(!/ceiling|beyond/i.test(message))throw error;
-      }
+      await crmApi.rpc('core_team_set_permission',{w,p_role:role.id,p_permission:permission,p_enabled:role.permissions.includes(key)});
     }
   }
   return loadRemoteAccessRoles();

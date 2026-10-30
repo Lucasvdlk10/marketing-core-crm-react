@@ -1,5 +1,4 @@
 begin;
-
 do $$
 begin
   if exists(
@@ -10,11 +9,9 @@ begin
     raise exception 'Cannot enforce one master owner: duplicate active owners exist';
   end if;
 end $$;
-
 create unique index if not exists core_memberships_one_active_owner
 on public.core_memberships(workspace_id)
 where role='owner' and active;
-
 create or replace function public.core_protect_master_membership()
 returns trigger language plpgsql set search_path='' as $$
 begin
@@ -31,13 +28,11 @@ begin
   end if;
   return case when tg_op='DELETE' then old else new end;
 end $$;
-
 revoke all on function public.core_protect_master_membership() from public,anon,authenticated;
 drop trigger if exists core_protect_master_membership on public.core_memberships;
 create trigger core_protect_master_membership
 before update or delete on public.core_memberships
 for each row execute function public.core_protect_master_membership();
-
 create or replace function public.core_team_member_directory(w uuid)
 returns table(user_id uuid, full_name text, email text)
 language plpgsql stable security definer set search_path='' as $$
@@ -55,7 +50,6 @@ begin
   where m.workspace_id=w and m.role<>'owner'
   order by m.joined_at asc;
 end $$;
-
 create or replace function public.core_team_update_member_profile(
   w uuid,
   p_user uuid,
@@ -82,7 +76,6 @@ begin
   insert into core_private.platform_audit(actor_id,action,workspace_id,metadata)
   values(auth.uid(),'member_profile_updated',w,pg_catalog.jsonb_build_object('user_id',p_user,'active',p_active,'role',p_role));
 end $$;
-
 create or replace function public.core_limit_master_invitations()
 returns trigger language plpgsql set search_path='' as $$
 begin
@@ -94,16 +87,13 @@ begin
   end if;
   return new;
 end $$;
-
 revoke all on function public.core_limit_master_invitations() from public,anon,authenticated;
 drop trigger if exists core_limit_master_invitations on public.core_invitations;
 create trigger core_limit_master_invitations
 before insert or update of role,status on public.core_invitations
 for each row execute function public.core_limit_master_invitations();
-
 revoke all on function public.core_team_member_directory(uuid) from public,anon,authenticated;
 revoke all on function public.core_team_update_member_profile(uuid,uuid,text,text,boolean) from public,anon,authenticated;
 grant execute on function public.core_team_member_directory(uuid) to authenticated;
 grant execute on function public.core_team_update_member_profile(uuid,uuid,text,text,boolean) to authenticated;
-
 commit;

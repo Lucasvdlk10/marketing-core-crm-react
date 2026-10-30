@@ -4,7 +4,12 @@ dist/
 .vite/
 .vite-temp/
 *.log
-_project_delivery/
+_project_delivery/*
+!_project_delivery/
+_project_delivery/*
+!_project_delivery/audit/
+_project_delivery/audit/*
+!_project_delivery/audit/*.md
 .DS_Store
 Thumbs.db
 .env

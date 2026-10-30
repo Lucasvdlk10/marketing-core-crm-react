@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { SettingsPage, type CompanyProfile } from "../pages/SettingsPage";
 import { AppShell } from "../components/layout/AppShell";
 import { canManageSettings, canManageTeam } from "../lib/authorization";
+import {isRemoteRolePermissionAvailable} from '../lib/workspaceSettings';
 
 const profile: CompanyProfile = {
   name: "Marketing Core",
@@ -58,6 +59,28 @@ describe("Settings autenticada e autorização", () => {
     expect(canManageSettings("admin")).toBe(true);
     expect(canManageTeam("marketing_manager")).toBe(false);
     expect(canManageSettings("sdr")).toBe(false);
+  });
+
+  it('torna editável uma capacidade antes bloqueada pelo nome da função',()=>{
+    expect(isRemoteRolePermissionAvailable('sdr','pipelineDelete')).toBe(true);
+    expect(isRemoteRolePermissionAvailable('admin','leadsDelete')).toBe(true);
+    expect(isRemoteRolePermissionAvailable('owner','pipelineDelete')).toBe(false);
+  });
+
+  it('permite marcar e persiste uma capacidade antes bloqueada para SDR',async()=>{
+    localStorage.clear();
+    const user=userEvent.setup();
+    const view=render(<SettingsPage profile={profile} onSave={async next=>next}/>);
+    await user.click(screen.getByRole('button',{name:'Equipe e acesso'}));
+    const checkbox=screen.getByLabelText('SDR: Excluir negociações');
+    expect(checkbox).toBeEnabled();
+    await user.click(checkbox);
+    await user.click(screen.getByRole('button',{name:'Salvar funções e acessos'}));
+    expect(await screen.findByRole('status')).toHaveTextContent('Funções e níveis de acesso salvos');
+    view.unmount();
+    render(<SettingsPage profile={profile} onSave={async next=>next}/>);
+    await user.click(screen.getByRole('button',{name:'Equipe e acesso'}));
+    expect(screen.getByLabelText('SDR: Excluir negociações')).toBeChecked();
   });
 
   it("oculta equipe e configurações da navegação sem permissão", () => {

@@ -14,6 +14,7 @@ import { LeadImportPage } from "../components/contacts/LeadImportPage";
 import {PhoneInput,phoneIdentity} from "../components/common/PhoneInput";
 import {getLeadSources} from "../lib/leadSources";
 import { type MockLead } from "../data/mockCrmData";
+import {currentCapability} from '../lib/effectivePermissions';
 import {
   createLeadRecord,
   getEffectiveLeads,
@@ -64,6 +65,7 @@ const leadDate = (value: string) => {
   return new Date(year, month - 1, day).getTime();
 };
 export function ContactsPage({ preview = false }: { preview?: boolean }) {
+  const canWrite=currentCapability('contacts.write',preview);
   const [query, setQuery] = useState("");
   const [importing, setImporting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -155,6 +157,7 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
   );
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if(!canWrite)return;
     const phone = phoneIdentity(draft.phone);
     const email = draft.email.trim().toLowerCase();
     if (allLeads.some((item) => phoneIdentity(item.phone) === phone)) {
@@ -226,8 +229,8 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
     return (
       <LeadImportPage
         onBack={() => setImporting(false)}
-        onImport={async (leads, onProgress) => {
-          await importLeadRecords(leads, onProgress);
+        onImport={async (leads, onProgress, metadata) => {
+          await importLeadRecords(leads, onProgress, metadata);
           setImporting(false);
         }}
       />
@@ -250,13 +253,7 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
               <Filter size={16} />
               Filtrar{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
             </button>
-            <button
-              className="btn secondary"
-              onClick={() => setImporting(true)}
-            >
-              <Upload size={16} />
-              Importar leads
-            </button>
+            {canWrite&&<button className="btn secondary" onClick={() => setImporting(true)}><Upload size={16} />Importar leads</button>}
             <div className="report-export">
               <button
                 className="btn secondary"
@@ -280,15 +277,7 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
                 </div>
               )}
             </div>
-            <button
-              className="btn primary"
-              onClick={() => {
-                setLeadError("");
-                setOpen(true);
-              }}
-            >
-              + Novo lead
-            </button>
+            {canWrite&&<button className="btn primary" onClick={() => {setLeadError("");setOpen(true)}}>+ Novo lead</button>}
           </>
         }
       />
@@ -366,7 +355,6 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
           className="contacts-table"
           onRowClick={setSelectedLead}
         />
-        {preview && (
           <footer className="collection-footer lead-pagination">
             <div className="pagination-size">
               <span>Mostrar</span>
@@ -376,13 +364,14 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
                 onChange={(event) => setPageSize(Number(event.target.value))}
               >
                 <option value={10}>10</option>
-                <option value={25}>25</option>
+                <option value={20}>20</option>
+                <option value={30}>30</option>
                 <option value={50}>50</option>
               </select>
               <span>por página</span>
             </div>
             <span className="pagination-result">
-              Exibindo {(page - 1) * pageSize + 1}–
+              Exibindo {filtered.length?(page - 1) * pageSize + 1:0}–
               {Math.min(page * pageSize, filtered.length)} de {filtered.length}{" "}
               leads
             </span>
@@ -418,7 +407,6 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
               </button>
             </nav>
           </footer>
-        )}
       </section>
       {filterOpen && (
         <div className="modal-backdrop" role="presentation">

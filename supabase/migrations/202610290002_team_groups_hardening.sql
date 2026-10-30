@@ -1,16 +1,12 @@
 begin;
-
 create unique index if not exists core_team_groups_workspace_id_unique
 on public.core_team_groups(workspace_id,id);
-
 alter table public.core_team_group_members
   drop constraint if exists core_team_group_members_team_workspace_fk;
-
 alter table public.core_team_group_members
   add constraint core_team_group_members_team_workspace_fk
   foreign key(workspace_id,team_id)
   references public.core_team_groups(workspace_id,id) on delete cascade;
-
 create or replace function public.core_team_groups(w uuid)
 returns table(id uuid, name text, member_ids uuid[], created_at timestamptz)
 language plpgsql stable security definer set search_path='' as $$
@@ -28,7 +24,6 @@ begin
   group by g.id,g.name,g.created_at
   order by g.name asc,g.id asc;
 end $$;
-
 create or replace function public.core_team_group_add_member(w uuid,p_team uuid,p_user uuid)
 returns void language plpgsql security definer set search_path='' as $$
 begin
@@ -39,7 +34,6 @@ begin
   if not found then return; end if;
   insert into core_private.platform_audit(actor_id,action,workspace_id,metadata) values(auth.uid(),'team_group_member_added',w,pg_catalog.jsonb_build_object('team_id',p_team,'user_id',p_user));
 end $$;
-
 create or replace function public.core_team_group_remove_member(w uuid,p_team uuid,p_user uuid)
 returns void language plpgsql security definer set search_path='' as $$
 begin
@@ -49,7 +43,6 @@ begin
   if not found then return; end if;
   insert into core_private.platform_audit(actor_id,action,workspace_id,metadata) values(auth.uid(),'team_group_member_removed',w,pg_catalog.jsonb_build_object('team_id',p_team,'user_id',p_user));
 end $$;
-
 create or replace function public.core_team_group_set_members(w uuid,p_team uuid,p_users uuid[])
 returns void language plpgsql security definer set search_path='' as $$
 declare clean_users uuid[]; invalid_count integer;
@@ -66,8 +59,6 @@ begin
   insert into core_private.platform_audit(actor_id,action,workspace_id,metadata)
   values(auth.uid(),'team_group_members_replaced',w,pg_catalog.jsonb_build_object('team_id',p_team,'member_ids',to_jsonb(clean_users)));
 end $$;
-
 revoke all on function public.core_team_group_set_members(uuid,uuid,uuid[]) from public,anon,authenticated;
 grant execute on function public.core_team_group_set_members(uuid,uuid,uuid[]) to authenticated;
-
 commit;

@@ -29,7 +29,7 @@ import {
 } from "../lib/accessRoles";
 import { getLeadTags, saveLeadTags, type LeadTagConfig } from "../lib/leadTags";
 import {getLeadSources,saveLeadSources} from "../lib/leadSources";
-import {isRemoteRolePermissionAvailable,loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
+import {loadRemoteAccessRoles,loadRemoteCommercialSettings,saveRemoteAccessRoles,saveRemoteCommercialSetting} from "../lib/workspaceSettings";
 import {crmApi} from "../lib/api";
 export type CompanyProfile = { name: string; tagline: string; logoUrl: string };
 export function SettingsPage({
@@ -742,8 +742,7 @@ export function SettingsPage({
                 <div>
                   <h2>Funções e níveis de acesso</h2>
                   <p>
-                    O administrador define quais áreas do CRM cada função pode
-                    acessar.
+                    As permissões são configuradas por função, não por membro individual. Personalize a função aqui e atribua essa função ao usuário em Equipe.
                   </p>
                 </div>
                 <button className="btn secondary" disabled={authenticated} onClick={addAccessRole}>
@@ -792,7 +791,7 @@ export function SettingsPage({
                             type="checkbox"
                             aria-label={`${role.name}: ${label}`}
                             checked={role.permissions.includes(permission)}
-                            disabled={role.protected||(authenticated&&!isRemoteRolePermissionAvailable(role.id,permission))}
+                            disabled={role.protected}
                             onChange={() => togglePermission(role, permission)}
                           />
                           <span>{label}</span>

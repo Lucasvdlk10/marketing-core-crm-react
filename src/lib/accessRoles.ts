@@ -1,6 +1,6 @@
-export type AccessPermission='leads'|'pipeline'|'tasks'|'calendar'|'reports'|'automations'|'team'|'settings';
+export type AccessPermission='leads'|'leadsWrite'|'leadsDelete'|'pipeline'|'pipelineWrite'|'pipelineDelete'|'tasks'|'tasksWrite'|'tasksDelete'|'calendar'|'reports'|'automations'|'team'|'settings';
 export type AccessRole={id:string;name:string;permissions:AccessPermission[];protected?:boolean};
-export const permissionLabels:Record<AccessPermission,string>={leads:'Leads e contatos',pipeline:'Pipeline e negociações',tasks:'Tarefas',calendar:'Calendário',reports:'Relatórios',automations:'Automações e integrações',team:'Equipe e acessos',settings:'Configurações administrativas'};
+export const permissionLabels:Record<AccessPermission,string>={leads:'Leads e contatos',leadsWrite:'Criar, editar e atribuir tags',leadsDelete:'Excluir leads e contatos',pipeline:'Pipeline e negociações',pipelineWrite:'Criar, editar, mover, ganhar/perder e definir próxima ação',pipelineDelete:'Excluir negociações',tasks:'Tarefas',tasksWrite:'Criar e editar tarefas',tasksDelete:'Excluir tarefas',calendar:'Calendário',reports:'Relatórios',automations:'Automações e integrações',team:'Equipe e acessos',settings:'Configurações administrativas'};
 const key='marketing_core_access_roles';
 const all=Object.keys(permissionLabels) as AccessPermission[];
 export const defaultAccessRoles:AccessRole[]=[{id:'administrator',name:'Administrador',permissions:all,protected:true},{id:'sales-manager',name:'Gestora comercial',permissions:['leads','pipeline','tasks','calendar','reports','team']},{id:'sdr',name:'SDR',permissions:['leads','pipeline','tasks','calendar']},{id:'analyst',name:'Analista',permissions:['leads','tasks','calendar','reports']}];

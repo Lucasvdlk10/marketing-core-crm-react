@@ -1,18 +1,731 @@
-import {useEffect,useMemo,useState,type FormEvent} from 'react';
-import {Check,Pencil,Trash2,X} from 'lucide-react';
-import {PageHeader} from '../components/common/PageHeader';
-import {DataTable} from '../components/common/DataTable';
-import {mockTasks,mockTeam} from '../data/mockCrmData';
-import {getEffectiveLeads} from '../lib/leadRecords';
-import {getRemoteSnapshot,isRemoteMode} from '../lib/remoteCrm';
-import {deleteCalendarTaskRecord,getCalendarTaskRecords,getDeletedCalendarTasks,saveCalendarTaskRecord,subscribeCalendarTasks,type CalendarTaskRecord} from '../lib/calendarTasks';
-type TaskView=CalendarTaskRecord&{leadId:string};
-const dateValue=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-const dueDate=(dueAt:string,index:number)=>{const date=new Date();if(dueAt==='Amanhã')date.setDate(date.getDate()+1);else if(dueAt!=='Hoje'){const day=Number(dueAt.match(/\d+/)?.[0]||date.getDate());date.setDate(day);if(day<date.getDate()&&index>15)date.setMonth(date.getMonth()+1)}return dateValue(date)};
-const displayDate=(date:string)=>new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'short'}).format(new Date(`${date}T12:00:00`)).replace('.','');
-const liveStatus=(task:TaskView):TaskView['status']=>task.status==='Concluída'?'Concluída':new Date(`${task.date}T${task.time||'23:59'}:00`).getTime()<Date.now()?'Atrasada':'Pendente';
-const emptyTask=():TaskView=>({id:'',title:'',date:dateValue(new Date()),time:'',leadName:'',leadId:'',company:'',assignee:'',priority:'Média',status:'Pendente',notes:'',source:'manual'});
-export function TasksPage({preview=false}:{preview?:boolean}){const[version,setVersion]=useState(0);const[creating,setCreating]=useState(false);const leads=getEffectiveLeads();const assignees=isRemoteMode()?(getRemoteSnapshot()?.members||[]).map(member=>({id:member.user_id,name:member.full_name})):mockTeam;const companies=[...new Set(leads.map(lead=>lead.company).filter(Boolean))].sort();const[selected,setSelected]=useState<TaskView|null>(null);const[editing,setEditing]=useState(false);const[deleteOpen,setDeleteOpen]=useState(false);const[draft,setDraft]=useState<TaskView|null>(null);const[busy,setBusy]=useState(false);const[formError,setFormError]=useState('');const rows=useMemo(()=>{if(!preview&&!isRemoteMode())return[];const records=new Map(getCalendarTaskRecords().map(record=>[record.id,record]));const deleted=new Set(getDeletedCalendarTasks());const examples=isRemoteMode()?[]:mockTasks.filter(task=>!deleted.has(task.id)).map((task,index)=>{const override=records.get(task.id);const base:TaskView=override?{...override,time:override.time||'09:00',leadId:task.leadId}:{id:task.id,title:task.title,date:dueDate(task.dueAt,index),time:'09:00',leadName:task.leadName,leadId:task.leadId,company:task.company,assignee:task.assignee,priority:task.priority,status:task.status==='Concluída'?'Concluída':'Pendente',notes:'',source:'mock'};return{...base,status:liveStatus(base)}});const manual=getCalendarTaskRecords().filter(record=>record.source==='manual'&&!deleted.has(record.id)).map(record=>{const task={...record,time:record.time||'09:00',leadId:(record as CalendarTaskRecord&{leadId?:string}).leadId||''} as TaskView;return{...task,status:liveStatus(task)}});return[...manual,...examples]},[preview,version]);useEffect(()=>subscribeCalendarTasks(()=>setVersion(value=>value+1)),[]);useEffect(()=>{const taskId=new URLSearchParams(window.location.hash.split('?')[1]||'').get('task');if(!taskId)return;const task=rows.find(item=>item.id===taskId);if(task)setSelected(task)},[rows]);const openEdit=()=>{if(!selected)return;setDraft({...selected});setEditing(true)};const save=async(event:FormEvent)=>{event.preventDefault();if(!draft||busy)return;setFormError('');setBusy(true);try{if(creating){const lead=leads.find(item=>item.name===draft.leadName);const saved:TaskView={...draft,id:`calendar-task-${Date.now()}`,leadId:lead?.id||'',company:lead?.company||draft.company,status:'Pendente',source:'manual'};await saveCalendarTaskRecord(saved);setCreating(false);setDraft(null);return}const saved={...draft,status:liveStatus(draft),source:draft.source};await saveCalendarTaskRecord(saved);setSelected(saved);setEditing(false)}catch(error){setFormError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}};const conclude=async()=>{if(!selected||busy)return;const saved={...selected,status:'Concluída' as const,source:selected.source};setFormError('');setBusy(true);try{await saveCalendarTaskRecord(saved);setSelected(saved)}catch(error){setFormError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}};const remove=async()=>{if(!selected||busy)return;setFormError('');setBusy(true);try{await deleteCalendarTaskRecord(selected.id);setSelected(null);setDeleteOpen(false)}catch(error){setFormError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}};return <><PageHeader title="Tarefas" subtitle="Prioridades, responsáveis e prazos da equipe." actions={<button className="btn primary" aria-label="Nova tarefa" onClick={()=>{setDraft(emptyTask());setCreating(true)}}>+ Nova tarefa</button>}/>{preview&&<div className="task-summary"><span><strong>{rows.length}</strong> tarefas vinculadas a leads</span><span><strong>{new Set(rows.map(task=>task.assignee)).size}</strong> responsáveis</span><span><strong>{rows.filter(task=>task.status!=='Concluída').length}</strong> em aberto</span></div>}<section className="surface"><DataTable<TaskView> columns={[{key:'title',label:'TAREFA',render:row=><div className="task-title"><strong>{row.title}</strong><small>{row.company}</small></div>},{key:'leadName',label:'LEAD'},{key:'assignee',label:'RESPONSÁVEL'},{key:'date',label:'PRAZO',render:row=><span>{displayDate(row.date)} · {row.time}</span>},{key:'priority',label:'PRIORIDADE',render:row=><span className={`priority-tag ${row.priority.toLowerCase().replace('é','e')}`}>{row.priority}</span>},{key:'status',label:'STATUS',render:row=><span className={`task-status ${row.status.toLowerCase().replace(' ','-').replace('í','i')}`}>{row.status}</span>}]} rows={rows} className="tasks-table" onRowClick={setSelected}/></section>{formError&&<p className="task-form-error" role="alert">{formError}</p>}{creating&&draft&&<div className="modal-backdrop" role="presentation"><form className="calendar-task-modal" role="dialog" aria-modal="true" aria-label="Cadastrar nova tarefa" onSubmit={save}><header><div><span>NOVA TAREFA</span><h2>Cadastrar tarefa</h2><p>Defina prazo, responsável e vínculo com o lead.</p></div><button type="button" aria-label="Fechar cadastro da tarefa" onClick={()=>{setCreating(false);setDraft(null)}}><X size={18}/></button></header><div className="form-grid"><label className="field full"><span>Título</span><input aria-label="Título da tarefa" required autoFocus value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})}/></label><label className="field"><span>Data</span><input aria-label="Data da tarefa" type="date" min={dateValue(new Date())} required value={draft.date} onChange={event=>setDraft({...draft,date:event.target.value})}/></label><label className="field"><span>Horário</span><input aria-label="Horário da tarefa" type="time" required value={draft.time} onChange={event=>setDraft({...draft,time:event.target.value})}/></label><label className="field"><span>Responsável</span><select aria-label="Responsável pela tarefa" required value={draft.assignee} onChange={event=>setDraft({...draft,assignee:event.target.value})}><option value="">Selecione um usuário</option>{assignees.map(member=><option key={member.id}>{member.name}</option>)}</select></label><label className="field"><span>Prioridade</span><select aria-label="Prioridade da tarefa" value={draft.priority} onChange={event=>setDraft({...draft,priority:event.target.value as TaskView['priority']})}><option>Alta</option><option>Média</option><option>Baixa</option></select></label><label className="field"><span>Lead ou contato</span><input aria-label="Lead da tarefa" list="task-page-leads" value={draft.leadName} onChange={event=>{const lead=leads.find(item=>item.name===event.target.value);setDraft({...draft,leadName:event.target.value,leadId:lead?.id||'',company:lead?.company||draft.company})}} placeholder="Digite para pesquisar"/><datalist id="task-page-leads">{leads.map(lead=><option key={lead.id} value={lead.name}>{lead.company}</option>)}</datalist></label><label className="field"><span>Empresa</span><input aria-label="Empresa da tarefa" list="task-page-companies" value={draft.company} onChange={event=>setDraft({...draft,company:event.target.value})} placeholder="Digite para pesquisar"/><datalist id="task-page-companies">{companies.map(company=><option key={company} value={company}/>)}</datalist></label><label className="field full"><span>Observações</span><textarea aria-label="Observações da tarefa" value={draft.notes} onChange={event=>setDraft({...draft,notes:event.target.value})}/></label></div><footer><button type="button" className="btn secondary" onClick={()=>{setCreating(false);setDraft(null)}}>Cancelar</button><button className="btn primary" type="submit" disabled={busy}>{busy?'Salvando...':'Cadastrar tarefa'}</button></footer></form></div>}
-  {selected&&!editing&&<div className="modal-backdrop" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setSelected(null)}}><section className="calendar-task-modal task-details" role="dialog" aria-modal="true" aria-label={`Detalhes da tarefa ${selected.title}`}><header><div><span>TAREFA</span><h2>{selected.title}</h2><p>{displayDate(selected.date)} às {selected.time}</p></div><button aria-label="Fechar detalhes da tarefa" onClick={()=>setSelected(null)}><X size={18}/></button></header><div className="task-detail-grid"><div><span>Lead</span><strong>{selected.leadName}</strong></div><div><span>Empresa</span><strong>{selected.company}</strong></div><div><span>Responsável</span><strong>{selected.assignee}</strong></div><div><span>Prioridade</span><strong>{selected.priority}</strong></div><div><span>Status</span><strong>{selected.status}</strong></div><div><span>Prazo</span><strong>{displayDate(selected.date)} às {selected.time}</strong></div></div>{selected.notes&&<div className="task-detail-notes"><span>Observações</span><p>{selected.notes}</p></div>}<footer><button className="btn danger" aria-label="Excluir tarefa" onClick={()=>setDeleteOpen(true)}><Trash2 size={15}/>Excluir</button>{selected.status!=='Concluída'&&<button className="btn success" onClick={conclude}><Check size={15}/>Concluir tarefa</button>}<button className="btn secondary" aria-label="Editar tarefa" onClick={openEdit}><Pencil size={15}/>Editar</button></footer></section></div>}
- {selected&&editing&&draft&&<div className="modal-backdrop" role="presentation"><form className="calendar-task-modal" role="dialog" aria-modal="true" aria-label={`Editar tarefa ${selected.title}`} onSubmit={save}><header><div><span>EDITAR TAREFA</span><h2>{selected.title}</h2></div><button type="button" aria-label="Cancelar edição da tarefa" onClick={()=>setEditing(false)}><X size={18}/></button></header><div className="form-grid"><label className="field full"><span>Título</span><input aria-label="Título da tarefa" required value={draft.title} onChange={event=>setDraft({...draft,title:event.target.value})}/></label><label className="field"><span>Data</span><input aria-label="Data da tarefa" type="date" required value={draft.date} onChange={event=>setDraft({...draft,date:event.target.value})}/></label><label className="field"><span>Horário</span><input aria-label="Horário da tarefa" type="time" required value={draft.time} onChange={event=>setDraft({...draft,time:event.target.value})}/></label><label className="field"><span>Responsável</span><select aria-label="Responsável pela tarefa" value={draft.assignee} onChange={event=>setDraft({...draft,assignee:event.target.value})}>{assignees.map(member=><option key={member.id}>{member.name}</option>)}</select></label><label className="field"><span>Prioridade</span><select aria-label="Prioridade da tarefa" value={draft.priority} onChange={event=>setDraft({...draft,priority:event.target.value as TaskView['priority']})}><option>Alta</option><option>Média</option><option>Baixa</option></select></label><label className="field"><span>Lead</span><input aria-label="Lead da tarefa" value={draft.leadName} onChange={event=>setDraft({...draft,leadName:event.target.value})}/></label><label className="field"><span>Empresa</span><input aria-label="Empresa da tarefa" value={draft.company} onChange={event=>setDraft({...draft,company:event.target.value})}/></label><label className="field full"><span>Observações</span><textarea aria-label="Observações da tarefa" value={draft.notes} onChange={event=>setDraft({...draft,notes:event.target.value})}/></label></div><footer><button type="button" className="btn secondary" onClick={()=>setEditing(false)}>Cancelar</button><button className="btn primary" type="submit">Salvar alterações</button></footer></form></div>}
- {deleteOpen&&selected&&<div className="modal-backdrop" role="presentation"><section className="automation-delete-modal" role="dialog" aria-modal="true" aria-label="Confirmar exclusão da tarefa"><div className="automation-delete-icon"><Trash2 size={22}/></div><h2>Excluir tarefa?</h2><p>A tarefa <strong>{selected.title}</strong> será removida da lista e do calendário.</p><footer><button className="btn secondary" onClick={()=>setDeleteOpen(false)}>Cancelar</button><button className="btn danger" onClick={remove}>Confirmar exclusão</button></footer></section></div>}</>}
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
+import { PageHeader } from "../components/common/PageHeader";
+import { DataTable } from "../components/common/DataTable";
+import { mockTasks, mockTeam } from "../data/mockCrmData";
+import { getEffectiveLeads } from "../lib/leadRecords";
+import { getRemoteSnapshot, isRemoteMode } from "../lib/remoteCrm";
+import {currentCapability} from '../lib/effectivePermissions';
+import {
+  deleteCalendarTaskRecord,
+  getCalendarTaskRecords,
+  getDeletedCalendarTasks,
+  saveCalendarTaskRecord,
+  subscribeCalendarTasks,
+  type CalendarTaskRecord,
+} from "../lib/calendarTasks";
+type TaskView = CalendarTaskRecord & { leadId: string };
+const dateValue = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const dueDate = (dueAt: string, index: number) => {
+  const date = new Date();
+  if (dueAt === "Amanhã") date.setDate(date.getDate() + 1);
+  else if (dueAt !== "Hoje") {
+    const day = Number(dueAt.match(/\d+/)?.[0] || date.getDate());
+    date.setDate(day);
+    if (day < date.getDate() && index > 15) date.setMonth(date.getMonth() + 1);
+  }
+  return dateValue(date);
+};
+const displayDate = (date: string) =>
+  new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" })
+    .format(new Date(`${date}T12:00:00`))
+    .replace(".", "");
+const liveStatus = (task: TaskView): TaskView["status"] =>
+  task.status === "Concluída"
+    ? "Concluída"
+    : new Date(`${task.date}T${task.time || "23:59"}:00`).getTime() < Date.now()
+      ? "Atrasada"
+      : "Pendente";
+const emptyTask = (): TaskView => ({
+  id: "",
+  title: "",
+  date: dateValue(new Date()),
+  time: "",
+  leadName: "",
+  leadId: "",
+  company: "",
+  assignee: "",
+  priority: "Média",
+  status: "Pendente",
+  notes: "",
+  source: "manual",
+});
+export function TasksPage({ preview = false }: { preview?: boolean }) {
+  const canWrite=currentCapability('tasks.write',preview);const canDelete=currentCapability('tasks.delete',preview);
+  const [version, setVersion] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const leads = getEffectiveLeads();
+  const assignees = isRemoteMode()
+    ? (getRemoteSnapshot()?.members || []).map((member) => ({
+        id: member.user_id,
+        name: member.full_name,
+      }))
+    : mockTeam;
+  const companies = [
+    ...new Set(leads.map((lead) => lead.company).filter(Boolean)),
+  ].sort();
+  const [selected, setSelected] = useState<TaskView | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [draft, setDraft] = useState<TaskView | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState("");
+  const rows = useMemo(() => {
+    if (!preview && !isRemoteMode()) return [];
+    const records = new Map(
+      getCalendarTaskRecords().map((record) => [record.id, record]),
+    );
+    const deleted = new Set(getDeletedCalendarTasks());
+    const examples = isRemoteMode()
+      ? []
+      : mockTasks
+          .filter((task) => !deleted.has(task.id))
+          .map((task, index) => {
+            const override = records.get(task.id);
+            const base: TaskView = override
+              ? {
+                  ...override,
+                  time: override.time || "09:00",
+                  leadId: task.leadId,
+                }
+              : {
+                  id: task.id,
+                  title: task.title,
+                  date: dueDate(task.dueAt, index),
+                  time: "09:00",
+                  leadName: task.leadName,
+                  leadId: task.leadId,
+                  company: task.company,
+                  assignee: task.assignee,
+                  priority: task.priority,
+                  status:
+                    task.status === "Concluída" ? "Concluída" : "Pendente",
+                  notes: "",
+                  source: "mock",
+                };
+            return { ...base, status: liveStatus(base) };
+          });
+    const manual = getCalendarTaskRecords()
+      .filter((record) => record.source === "manual" && !deleted.has(record.id))
+      .map((record) => {
+        const task = {
+          ...record,
+          time: record.time || "09:00",
+          leadId:
+            (record as CalendarTaskRecord & { leadId?: string }).leadId || "",
+        } as TaskView;
+        return { ...task, status: liveStatus(task) };
+      });
+    return [...manual, ...examples];
+  }, [preview, version]);
+  useEffect(
+    () => subscribeCalendarTasks(() => setVersion((value) => value + 1)),
+    [],
+  );
+  useEffect(() => {
+    const taskId = new URLSearchParams(
+      window.location.hash.split("?")[1] || "",
+    ).get("task");
+    if (!taskId) return;
+    const task = rows.find((item) => item.id === taskId);
+    if (task) setSelected(task);
+  }, [rows]);
+  const openEdit = () => {
+    if(!canWrite)return;
+    if (!selected) return;
+    setDraft({ ...selected });
+    setEditing(true);
+  };
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    if(!canWrite)return;
+    if (!draft || busy) return;
+    setFormError("");
+    setBusy(true);
+    try {
+      if (creating) {
+        const lead = leads.find((item) => item.name === draft.leadName);
+        const saved: TaskView = {
+          ...draft,
+          id: `calendar-task-${Date.now()}`,
+          leadId: lead?.id || "",
+          company: lead?.company || draft.company,
+          status: "Pendente",
+          source: "manual",
+        };
+        await saveCalendarTaskRecord(saved);
+        setCreating(false);
+        setDraft(null);
+        return;
+      }
+      const saved = {
+        ...draft,
+        status: liveStatus(draft),
+        source: draft.source,
+      };
+      await saveCalendarTaskRecord(saved);
+      setSelected(saved);
+      setEditing(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const conclude = async () => {
+    if(!canWrite)return;
+    if (!selected || busy) return;
+    const saved = {
+      ...selected,
+      status: "Concluída" as const,
+      source: selected.source,
+    };
+    setFormError("");
+    setBusy(true);
+    try {
+      await saveCalendarTaskRecord(saved);
+      setSelected(saved);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async () => {
+    if(!canDelete)return;
+    if (!selected || busy) return;
+    setFormError("");
+    setBusy(true);
+    try {
+      await deleteCalendarTaskRecord(selected.id);
+      setSelected(null);
+      setDeleteOpen(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <PageHeader
+        title="Tarefas"
+        subtitle="Prioridades, responsáveis e prazos da equipe."
+        actions={canWrite&&
+          <button
+            className="btn primary"
+            aria-label="Nova tarefa"
+            onClick={() => {
+              setDraft(emptyTask());
+              setCreating(true);
+            }}
+          >
+            + Nova tarefa
+          </button>
+        }
+      />
+      {preview && (
+        <div className="task-summary">
+          <span>
+            <strong>{rows.length}</strong> tarefas vinculadas a leads
+          </span>
+          <span>
+            <strong>{new Set(rows.map((task) => task.assignee)).size}</strong>{" "}
+            responsáveis
+          </span>
+          <span>
+            <strong>
+              {rows.filter((task) => task.status !== "Concluída").length}
+            </strong>{" "}
+            em aberto
+          </span>
+        </div>
+      )}
+      <section className="surface">
+        <DataTable<TaskView>
+          columns={[
+            {
+              key: "title",
+              label: "TAREFA",
+              render: (row) => (
+                <div className="task-title">
+                  <strong>{row.title}</strong>
+                  <small>{row.company}</small>
+                </div>
+              ),
+            },
+            { key: "leadName", label: "LEAD" },
+            { key: "assignee", label: "RESPONSÁVEL" },
+            {
+              key: "date",
+              label: "PRAZO",
+              render: (row) => (
+                <span>
+                  {displayDate(row.date)} · {row.time}
+                </span>
+              ),
+            },
+            {
+              key: "priority",
+              label: "PRIORIDADE",
+              render: (row) => (
+                <span
+                  className={`priority-tag ${row.priority.toLowerCase().replace("é", "e")}`}
+                >
+                  {row.priority}
+                </span>
+              ),
+            },
+            {
+              key: "status",
+              label: "STATUS",
+              render: (row) => (
+                <span
+                  className={`task-status ${row.status.toLowerCase().replace(" ", "-").replace("í", "i")}`}
+                >
+                  {row.status}
+                </span>
+              ),
+            },
+          ]}
+          rows={rows}
+          className="tasks-table"
+          onRowClick={setSelected}
+        />
+      </section>
+      {formError && (
+        <p className="task-form-error" role="alert">
+          {formError}
+        </p>
+      )}
+      {creating && draft && (
+        <div className="modal-backdrop" role="presentation">
+          <form
+            className="calendar-task-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Cadastrar nova tarefa"
+            onSubmit={save}
+          >
+            <header>
+              <div>
+                <span>NOVA TAREFA</span>
+                <h2>Cadastrar tarefa</h2>
+                <p>Defina prazo, responsável e vínculo com o lead.</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Fechar cadastro da tarefa"
+                onClick={() => {
+                  setCreating(false);
+                  setDraft(null);
+                }}
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <div className="form-grid">
+              <label className="field full">
+                <span>Título</span>
+                <input
+                  aria-label="Título da tarefa"
+                  required
+                  autoFocus
+                  value={draft.title}
+                  onChange={(event) =>
+                    setDraft({ ...draft, title: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Data</span>
+                <input
+                  aria-label="Data da tarefa"
+                  type="date"
+                  min={dateValue(new Date())}
+                  required
+                  value={draft.date}
+                  onChange={(event) =>
+                    setDraft({ ...draft, date: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Horário</span>
+                <input
+                  aria-label="Horário da tarefa"
+                  type="time"
+                  required
+                  value={draft.time}
+                  onChange={(event) =>
+                    setDraft({ ...draft, time: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Responsável</span>
+                <select
+                  aria-label="Responsável pela tarefa"
+                  required
+                  value={draft.assignee}
+                  onChange={(event) =>
+                    setDraft({ ...draft, assignee: event.target.value })
+                  }
+                >
+                  <option value="">Selecione um usuário</option>
+                  {assignees.map((member) => (
+                    <option key={member.id}>{member.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Prioridade</span>
+                <select
+                  aria-label="Prioridade da tarefa"
+                  value={draft.priority}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      priority: event.target.value as TaskView["priority"],
+                    })
+                  }
+                >
+                  <option>Alta</option>
+                  <option>Média</option>
+                  <option>Baixa</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Lead ou contato</span>
+                <input
+                  aria-label="Lead da tarefa"
+                  list="task-page-leads"
+                  value={draft.leadName}
+                  onChange={(event) => {
+                    const lead = leads.find(
+                      (item) => item.name === event.target.value,
+                    );
+                    setDraft({
+                      ...draft,
+                      leadName: event.target.value,
+                      leadId: lead?.id || "",
+                      company: lead?.company || draft.company,
+                    });
+                  }}
+                  placeholder="Digite para pesquisar"
+                />
+                <datalist id="task-page-leads">
+                  {leads.map((lead) => (
+                    <option key={lead.id} value={lead.name}>
+                      {lead.company}
+                    </option>
+                  ))}
+                </datalist>
+              </label>
+              <label className="field">
+                <span>Empresa</span>
+                <input
+                  aria-label="Empresa da tarefa"
+                  list="task-page-companies"
+                  value={draft.company}
+                  onChange={(event) =>
+                    setDraft({ ...draft, company: event.target.value })
+                  }
+                  placeholder="Digite para pesquisar"
+                />
+                <datalist id="task-page-companies">
+                  {companies.map((company) => (
+                    <option key={company} value={company} />
+                  ))}
+                </datalist>
+              </label>
+              <label className="field full">
+                <span>Observações</span>
+                <textarea
+                  aria-label="Observações da tarefa"
+                  value={draft.notes}
+                  onChange={(event) =>
+                    setDraft({ ...draft, notes: event.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => {
+                  setCreating(false);
+                  setDraft(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button className="btn primary" type="submit" disabled={busy}>
+                {busy ? "Salvando..." : "Cadastrar tarefa"}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+      {selected && !editing && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelected(null);
+          }}
+        >
+          <section
+            className="calendar-task-modal task-details"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Detalhes da tarefa ${selected.title}`}
+          >
+            <header>
+              <div>
+                <span>TAREFA</span>
+                <h2>{selected.title}</h2>
+                <p>
+                  {displayDate(selected.date)} às {selected.time}
+                </p>
+              </div>
+              <button
+                aria-label="Fechar detalhes da tarefa"
+                onClick={() => setSelected(null)}
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <div className="task-detail-grid">
+              <div>
+                <span>Lead</span>
+                <strong>{selected.leadName}</strong>
+              </div>
+              <div>
+                <span>Empresa</span>
+                <strong>{selected.company}</strong>
+              </div>
+              <div>
+                <span>Responsável</span>
+                <strong>{selected.assignee}</strong>
+              </div>
+              <div>
+                <span>Prioridade</span>
+                <strong>{selected.priority}</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong>{selected.status}</strong>
+              </div>
+              <div>
+                <span>Prazo</span>
+                <strong>
+                  {displayDate(selected.date)} às {selected.time}
+                </strong>
+              </div>
+            </div>
+            {selected.notes && (
+              <div className="task-detail-notes">
+                <span>Observações</span>
+                <p>{selected.notes}</p>
+              </div>
+            )}
+            <footer>
+              <button
+                className="btn danger"
+                aria-label="Excluir tarefa"
+                disabled={!canDelete}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 size={15} />
+                Excluir
+              </button>
+              {canWrite&&selected.status !== "Concluída" && (
+                <button className="btn success" onClick={conclude}>
+                  <Check size={15} />
+                  Concluir tarefa
+                </button>
+              )}
+              <button
+                className="btn secondary"
+                aria-label="Editar tarefa"
+                disabled={!canWrite}
+                onClick={openEdit}
+              >
+                <Pencil size={15} />
+                Editar
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+      {selected && editing && draft && (
+        <div className="modal-backdrop" role="presentation">
+          <form
+            className="calendar-task-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Editar tarefa ${selected.title}`}
+            onSubmit={save}
+          >
+            <header>
+              <div>
+                <span>EDITAR TAREFA</span>
+                <h2>{selected.title}</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Cancelar edição da tarefa"
+                onClick={() => setEditing(false)}
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <div className="form-grid">
+              <label className="field full">
+                <span>Título</span>
+                <input
+                  aria-label="Título da tarefa"
+                  required
+                  value={draft.title}
+                  onChange={(event) =>
+                    setDraft({ ...draft, title: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Data</span>
+                <input
+                  aria-label="Data da tarefa"
+                  type="date"
+                  required
+                  value={draft.date}
+                  onChange={(event) =>
+                    setDraft({ ...draft, date: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Horário</span>
+                <input
+                  aria-label="Horário da tarefa"
+                  type="time"
+                  required
+                  value={draft.time}
+                  onChange={(event) =>
+                    setDraft({ ...draft, time: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Responsável</span>
+                <select
+                  aria-label="Responsável pela tarefa"
+                  value={draft.assignee}
+                  onChange={(event) =>
+                    setDraft({ ...draft, assignee: event.target.value })
+                  }
+                >
+                  {assignees.map((member) => (
+                    <option key={member.id}>{member.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span>Prioridade</span>
+                <select
+                  aria-label="Prioridade da tarefa"
+                  value={draft.priority}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      priority: event.target.value as TaskView["priority"],
+                    })
+                  }
+                >
+                  <option>Alta</option>
+                  <option>Média</option>
+                  <option>Baixa</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Lead</span>
+                <input
+                  aria-label="Lead da tarefa"
+                  value={draft.leadName}
+                  onChange={(event) =>
+                    setDraft({ ...draft, leadName: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Empresa</span>
+                <input
+                  aria-label="Empresa da tarefa"
+                  value={draft.company}
+                  onChange={(event) =>
+                    setDraft({ ...draft, company: event.target.value })
+                  }
+                />
+              </label>
+              <label className="field full">
+                <span>Observações</span>
+                <textarea
+                  aria-label="Observações da tarefa"
+                  value={draft.notes}
+                  onChange={(event) =>
+                    setDraft({ ...draft, notes: event.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setEditing(false)}
+              >
+                Cancelar
+              </button>
+              <button className="btn primary" type="submit">
+                Salvar alterações
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+      {deleteOpen && selected && (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="automation-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmar exclusão da tarefa"
+          >
+            <div className="automation-delete-icon">
+              <Trash2 size={22} />
+            </div>
+            <h2>Excluir tarefa?</h2>
+            <p>
+              A tarefa <strong>{selected.title}</strong> será removida da lista
+              e do calendário.
+            </p>
+            <footer>
+              <button
+                className="btn secondary"
+                onClick={() => setDeleteOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button className="btn danger" onClick={remove}>
+                Confirmar exclusão
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+    </>
+  );
+}
