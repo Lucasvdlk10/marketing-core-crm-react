@@ -8,6 +8,7 @@ export type RemoteContact = {
   phone: string | null;
   company: string | null;
   source: string | null;
+  owner_id: string | null;
   status: "new" | "contacted" | "qualified" | "customer" | "lost";
   notes: string | null;
   custom_fields: Record<string, unknown> | null;
@@ -263,7 +264,7 @@ export async function bootstrapRemoteCrm(
   ] = await Promise.all([
     select<RemoteContact>(
       "core_contacts",
-      `select=id,workspace_id,name,email,phone,company,source,status,notes,custom_fields,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
+      `select=id,workspace_id,name,email,phone,company,source,status,owner_id,notes,custom_fields,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
     ),
     select<RemotePipeline>(
       "core_pipelines",

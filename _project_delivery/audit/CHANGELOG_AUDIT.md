@@ -60,3 +60,16 @@
 - Evidência remota: 23/23 eventos concluídos; 23/23 execuções concluídas em cada uma das três ações; 23/23 leads com tag `Hulk`, negociação criada e etapa final correta.
 - Migration `202610300004_fix_assignment_lint.sql` removeu a dependência de tabela temporária do distribuidor ponderado; `supabase db lint --linked --level error` passou sem resultados.
 - Validações: testes autenticados 26/26; suíte completa 173/173; typecheck e build aprovados; npm audit com 0 vulnerabilidades.
+
+## 30/10/2026 — Visão geral personalizável, filtros, equipes e metas
+
+- Dashboard refeito para o modo autenticado com grade responsiva arrastável e redimensionável usando `react-grid-layout`.
+- Adicionado filtro global de data inicial/final e perfil de equipe; os indicadores, funil, atividade, velocidade e progresso das metas usam o mesmo escopo.
+- Indicadores agora são acionáveis e abrem drawer lateral com os registros filtrados.
+- Adicionados velocidade média do pipeline, progresso por equipe e modal de inteligência de vendas com projeção determinística, risco de gargalo e sucesso imediato.
+- Criadas preferências tenant/user-scoped para layout e equipe selecionada em `core_dashboard_preferences`.
+- Criadas metas tenant-scoped em `core_sales_goals`, RPCs de leitura/upsert e geração idempotente de notificações de risco/sucesso por equipe e função.
+- Migration `202610300005_personalized_sales_dashboard.sql` aplicada no staging.
+- O dashboard passou a buscar `owner_id` dos contatos para filtrar por equipe corretamente.
+- Validações: Dashboard 5/5; suíte completa 178/178; TypeScript, build, audit de dependências e DB lint aprovados; 0 vulnerabilidades.
+- Pendência conhecida: o build mantém o aviso preexistente de `config.js` sem `type="module"` e o chunk inicial aumentou pela biblioteca de grid; não bloqueiam execução.

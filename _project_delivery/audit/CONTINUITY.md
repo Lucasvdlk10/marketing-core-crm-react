@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-A continuidade atual parte da branch `main`. Automações baseadas em listas agora processam também os membros existentes no momento da ativação, de forma idempotente e direcionada à revisão correta. A automação `Teste` processou os 23 membros da lista `teste`: todos receberam a tag `Hulk`, tiveram negociação criada e foram movidos para a etapa configurada. A tela possui métricas por automação e relatório por etapa/lead. Migrations `202610300003` e `202610300004` estão no staging e o DB lint está limpo.
+A continuidade atual parte da branch `main`, com a Visão geral expandida para dashboard personalizável, filtro global de datas, escopo por equipe, drawer de indicadores, velocidade do pipeline, metas e inteligência de vendas. A migration `202610300005_personalized_sales_dashboard.sql` está aplicada no staging. Automações por lista, funções personalizadas, importação, paginação e histórico permanecem validados. Última suíte: 178/178; DB lint limpo.
 
 ## Atualização contínua
 

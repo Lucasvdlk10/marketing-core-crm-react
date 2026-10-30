@@ -3,13 +3,13 @@
 - **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
 - **Branch:** `main`
-- **HEAD funcional publicado:** `ba6c92fae17d793a1c1d63ea2cfa4830939de58b`
-- **Último commit funcional:** `fix: concluir execucao e relatorios de automacoes` — 30/10/2026
+- **HEAD funcional local:** aguardando commit/push desta frente de dashboard
+- **Último commit funcional publicado:** `f7ec71bd14d927f0e8f40149320551a792514165`
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: VERDE — automação por lista corrigida e validada no staging com 23/23 leads processados; métricas e relatório operacional implementados; criação de negociação por pessoa/equipe, importação, paginação e histórico permanecem validados; suíte completa 173/173 e DB lint sem erros.**
+**Estado: AMARELO — dashboard personalizável, filtros, drawer, equipes, metas e inteligência foram implementados e validados localmente; migration aplicada no staging; falta commit/push e verificação do deploy público. Automação por lista, funções personalizadas, importação, paginação e histórico permanecem validados.**
 
 ### Atualização — importação de leads
 
