@@ -106,3 +106,12 @@
 - Migration aplicada no `L.E.I.A CRM Staging` (ref `nsrwjtgzluadienwtnxt`). Read-back: coluna existe, migration consta no histórico, 4 negociações perdidas e 0 sem `lost_at`; consulta agregada confirmou perda de R$ 2.000 em 30/10/2026.
 - Validações focadas: **21/21**; typecheck/build aprovados; `npm audit` 0 vulnerabilidades; DB lint exit 0 com avisos preexistentes. Workflow `41108027237`, no SHA `b33bfe848bf743f3cac8927e66cc61b8d871cb3c`: **42 arquivos/183 testes**, build e deploy aprovados. Asset público verificado: `index-CBeWXIWg.js`, HTTP 200, SHA-256 `a093adb7c7f695a8ef841e717a50704484ba082ca22b85c0f61022d34f30db0c`; contém os marcadores da correção.
 - Um disparo local com workers paralelos teve 174/183 testes devido a timeouts fora da área alterada; a execução serial usada no CI passou integralmente. Working tree source foi commitada e enviada; o usuário pode validar no próximo acesso após atualizar/recarregar o CRM.
+
+## 30/10/2026 — Dashboard mobile sem corte
+
+- Problema da captura: cards de indicadores com altura insuficiente no celular, valores e legendas cortados; layout móvel reaproveitava grid desktop.
+- Alterado `src/pages/DashboardPage.tsx`: classe mobile e persistência de layout desabilitada sob 700 px; drag/resize preservados e salvamento mantido acima do breakpoint.
+- Alterado `src/styles.css`: seletores scoping pela classe mobile no container medido convertem o grid em coluna fluida, liberam altura automática, quebram valores grandes e ajustam gráficos; sem classe mobile, os estilos desktop não são aplicados.
+- Novo `src/test/DashboardMobileLayout.test.tsx`: confirma todos os blocos e não salvar layout mobile, e que desktop permanece arrastável e persistido.
+- Validação: RED reproduzido antes da implementação; teste focado **7/7**, suíte serial **43/43 arquivos, 185/185 testes**, typecheck/build aprovados. Preview visual em 320, 390 e 576 px: sem overflow horizontal e cards sem corte; stress test com valor `R$ 151.563.514,00`. Em 1262 px: 4 colunas/itens absolutos, desktop preservado.
+- Arquivos temporários de preview removidos e Vite parado. Alteração móvel ainda não commitada, enviada nem publicada.

@@ -2,12 +2,20 @@
 
 - **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`; commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c` pushed to `origin/main`
+- **Branch:** `main`; HEAD base `81ee234` (`docs: record verified loss report deployment`); working tree has mobile dashboard changes not yet committed
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: VERDE para a correção do Relatório de motivos de perda — migration aplicada no staging, 183/183 testes passaram no workflow CI, build e deploy GitHub Pages concluídos para o commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c`; bundle público foi lido e verificado.**
+**Estado: AMARELO — melhorias mobile do Dashboard implementadas e validadas localmente; desktop preservado. Testes, typecheck e build passaram. Commit/push/deploy dessa alteração ainda pendentes.**
+
+### Mobile do Dashboard — 30/10/2026
+
+A captura do usuário mostrava cartões de indicadores com altura insuficiente, cortando valores e texto; o grid responsivo também herdava a posição/altura editável do desktop. Em viewport de até 700 px, o dashboard agora troca o grid absoluto do React Grid Layout por uma coluna fluida com cartões de altura automática, quebra segura de valores e gráficos com espaço; controles de arrastar/redimensionar ficam ocultos e as alterações mobile não sobrescrevem a preferência de layout desktop.
+
+Evidência visual local: viewport **320, 390 e 576 px**, 8 cartões visíveis/fluindo em coluna e `scrollWidth === clientWidth` (sem rolagem horizontal); valores de estresse como `R$ 151.563.514,00` aparecem sem corte. Em **1262 px**, o grid volta ao estilo desktop de 4 colunas, os itens continuam absolutos/arrastáveis e as regras novas não se aplicam.
+
+Regressão focada: **7/7 testes**; suíte completa **185/185** (43 arquivos, execução serial); TypeScript e build aprovados. Build preserva avisos preexistentes de `config.js` e chunk acima de 500 kB. As alterações estão locais; não declarar publicação até confirmar o workflow e o asset público do SHA final.
 
 ### Relatório de motivos de perda — 30/10/2026
 
