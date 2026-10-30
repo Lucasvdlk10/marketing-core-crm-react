@@ -114,4 +114,4 @@
 - Alterado `src/styles.css`: seletores scoping pela classe mobile no container medido convertem o grid em coluna fluida, liberam altura automática, quebram valores grandes e ajustam gráficos; sem classe mobile, os estilos desktop não são aplicados.
 - Novo `src/test/DashboardMobileLayout.test.tsx`: confirma todos os blocos e não salvar layout mobile, e que desktop permanece arrastável e persistido.
 - Validação: RED reproduzido antes da implementação; teste focado **7/7**, suíte serial **43/43 arquivos, 185/185 testes**, typecheck/build aprovados. Preview visual em 320, 390 e 576 px: sem overflow horizontal e cards sem corte; stress test com valor `R$ 151.563.514,00`. Em 1262 px: 4 colunas/itens absolutos, desktop preservado.
-- Arquivos temporários de preview removidos e Vite parado. Alteração móvel ainda não commitada, enviada nem publicada.
+- Arquivos temporários de preview removidos e Vite parado. Código commitado em `10efa8170e24f78ebffd6448040e76b4f6fb5038`, workflow `41120798607` concluído com sucesso e publicação verificada no bundle público (hashes listados na auditoria atual).

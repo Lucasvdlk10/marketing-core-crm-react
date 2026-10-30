@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-Melhoria mobile do Dashboard em andamento, baseada na captura do usuário. Base `81ee234`; alterações locais em `src/pages/DashboardPage.tsx`, `src/styles.css` e novo teste `src/test/DashboardMobileLayout.test.tsx`. Até 700 px, layout em coluna sem corte/overflow lateral; desktop 1262 px permanece grade de 4 colunas e editável. Testes focados 7/7, suíte 185/185, typecheck/build aprovados. Próximo: revisar diff, commit/push e validar workflow+asset do SHA, sem alterar outras páginas.
+Melhoria mobile do Dashboard baseada na captura do usuário, commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`, enviada e publicada pelo workflow `41120798607`. Até 700 px, layout em coluna sem cortes/overflow lateral; desktop 1262 px permanece 4 colunas/editável. Testes focados 7/7, suíte 185/185, typecheck/build aprovados. Assets públicos de CSS e JS verificados por SHA-256 contra `dist/`. Próximo: aguardar feedback; preservar desktop e não ampliar o escopo para outras páginas sem pedido.
 
 A entrega anterior do relatório de motivos foi corrigida no commit `b33bfe848bf743f3cac8927e66cc61b8d871cb3c`, enviada para `origin/main` e publicada no workflow `41108027237`. Causa: bootstrap `core_deals` omitia `loss_reason` e o relatório filtrava `created_at`. Migration `202610300008_loss_timestamp.sql` aplicada/confirmada no `L.E.I.A CRM Staging`; consulta agregada confirmou a perda real de R$ 2.000 em 30/10/2026. CI: 42 arquivos/183 testes, build e deploy aprovados. Bundle público verificado com SHA-256 `a093adb7c7f695a8ef841e717a50704484ba082ca22b85c0f61022d34f30db0c`.
 

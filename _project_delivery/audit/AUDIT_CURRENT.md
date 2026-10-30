@@ -2,12 +2,12 @@
 
 - **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`; HEAD base `81ee234` (`docs: record verified loss report deployment`); working tree has mobile dashboard changes not yet committed
+- **Branch:** `main`; código mobile no commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`, enviado a `origin/main`
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: AMARELO — melhorias mobile do Dashboard implementadas e validadas localmente; desktop preservado. Testes, typecheck e build passaram. Commit/push/deploy dessa alteração ainda pendentes.**
+**Estado: VERDE para a melhoria mobile do Dashboard — commit `10efa8170e24f78ebffd6448040e76b4f6fb5038`; CI e deploy GitHub Pages concluídos no workflow `41120798607`. Assets públicos coincidem byte a byte com o build local. Desktop preservado.**
 
 ### Mobile do Dashboard — 30/10/2026
 
@@ -15,7 +15,7 @@ A captura do usuário mostrava cartões de indicadores com altura insuficiente, 
 
 Evidência visual local: viewport **320, 390 e 576 px**, 8 cartões visíveis/fluindo em coluna e `scrollWidth === clientWidth` (sem rolagem horizontal); valores de estresse como `R$ 151.563.514,00` aparecem sem corte. Em **1262 px**, o grid volta ao estilo desktop de 4 colunas, os itens continuam absolutos/arrastáveis e as regras novas não se aplicam.
 
-Regressão focada: **7/7 testes**; suíte completa **185/185** (43 arquivos, execução serial); TypeScript e build aprovados. Build preserva avisos preexistentes de `config.js` e chunk acima de 500 kB. As alterações estão locais; não declarar publicação até confirmar o workflow e o asset público do SHA final.
+Regressão focada: **7/7 testes**; suíte completa **185/185** (43 arquivos, execução serial); TypeScript e build aprovados. Build preserva avisos preexistentes de `config.js` e chunk acima de 500 kB. Workflow `41120798607` concluiu CI e deploy para o mesmo SHA `10efa8170e24f78ebffd6448040e76b4f6fb5038`. O CSS público `assets/index-bv0W2g4u.css` (SHA-256 `c998cdb505abb7bde7e32bfa3a5eefd03aa5b451fd9379b99e859fa7ba741cca`) e JS `assets/index-CrwP6ViJ.js` (SHA-256 `258229697496ae3e643714ee88ab6fc801cc8efdcba852b071efe542033c5b57`) respondem HTTP 200 e correspondem exatamente aos artefatos locais.
 
 ### Relatório de motivos de perda — 30/10/2026
 
