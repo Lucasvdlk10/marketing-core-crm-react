@@ -3,8 +3,8 @@
 - **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
 - **Branch:** `main`
-- **HEAD funcional local:** aguardando commit/push desta frente de dashboard
-- **Último commit funcional publicado:** `f7ec71bd14d927f0e8f40149320551a792514165`
+- **HEAD funcional publicado:** `8b7e5b0cbeacc958052412b6a0846ef5aa67dc52`
+- **Último commit funcional:** `feat: personalizar dashboard comercial` — 30/10/2026
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
