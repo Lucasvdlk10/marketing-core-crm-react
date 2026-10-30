@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-A continuidade atual parte do commit funcional `394a3e4d8dbddc11d57b67c337b31fb07bf92545`, branch `main`, publicado com sucesso no GitHub Pages. O workspace principal do staging possui 212 contatos; a importação `teste1.csv` foi registrada como 200/200 concluída. A paginação autenticada e o histórico de importações são o novo ponto de partida.
+A continuidade atual parte do commit funcional `88ae95fdacda547ed5f3310db387a89d6c7eec1a`, branch `main`, publicado com sucesso no GitHub Pages. O proprietário pode criar, editar, excluir e salvar funções personalizadas; as definições são persistidas em `core_workspace_roles`. O workspace principal permanece com 212 contatos e a importação `teste1.csv` registrada como 200/200 concluída.
 
 ## Atualização contínua
 

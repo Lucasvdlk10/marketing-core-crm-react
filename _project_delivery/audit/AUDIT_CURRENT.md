@@ -3,13 +3,13 @@
 - **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
 - **Branch:** `main`
-- **HEAD remoto/local validado:** `394a3e4d8dbddc11d57b67c337b31fb07bf92545`
-- **Último commit funcional:** `feat: concluir fluxo de importacao e paginacao` — 30/10/2026
+- **HEAD funcional publicado:** `88ae95fdacda547ed5f3310db387a89d6c7eec1a`
+- **Último commit funcional:** `fix: liberar criacao de funcoes para proprietario` — 30/10/2026
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: VERDE — importação de 200 leads confirmada no banco, workspace com 212 contatos, paginação autenticada corrigida, histórico persistente aplicado no staging, suíte completa 170/170 e publicação no GitHub Pages verificada.**
+**Estado: VERDE — proprietário habilitado para criar e persistir funções personalizadas; importação, paginação e histórico permanecem validados; suíte completa 170/170 e publicação no GitHub Pages concluída.**
 
 ### Atualização — importação de leads
 
