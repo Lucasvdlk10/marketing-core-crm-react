@@ -41,6 +41,7 @@ export type RemoteDeal = {
   value: string;
   status: "open" | "won" | "lost";
   loss_reason: string | null;
+  lost_at: string | null;
   owner_id: string | null;
   expected_close: string | null;
   notes: string | null;
@@ -277,7 +278,7 @@ export async function bootstrapRemoteCrm(
     ),
     select<RemoteDeal>(
       "core_deals",
-      `select=id,workspace_id,contact_id,pipeline_id,stage_id,name,value,status,owner_id,expected_close,notes,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
+      `select=id,workspace_id,contact_id,pipeline_id,stage_id,name,value,status,loss_reason,lost_at,owner_id,expected_close,notes,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
     ),
     select<RemoteTask>(
       "core_tasks",

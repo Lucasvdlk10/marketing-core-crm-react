@@ -30,6 +30,19 @@ describe('ReportsPage',()=>{
 
   it('abre os relatórios de motivos de perda e tarefas',async()=>{const user=userEvent.setup();render(<ReportsPage/>);await user.click(screen.getByRole('button',{name:'Motivos de perda'}));expect(screen.getByRole('heading',{name:'Relatório de motivos de perda'})).toBeInTheDocument();expect(screen.getByText('Distribuição dos motivos')).toBeInTheDocument();expect(screen.getByText('Impacto financeiro')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Tarefas'}));expect(screen.getByRole('heading',{name:'Relatório de tarefas'})).toBeInTheDocument();expect(screen.getByText('Situação das tarefas')).toBeInTheDocument();expect(screen.getByText('Desempenho por responsável')).toBeInTheDocument()});
 
+  it('oferece todos os filtros de período solicitados para perdas e usa o intervalo personalizado na exportação',async()=>{
+    const user=userEvent.setup();render(<ReportsPage/>);
+    await user.click(screen.getByRole('button',{name:'Motivos de perda'}));
+    const period=screen.getByRole('combobox',{name:'Período do relatório'});
+    expect(Array.from((period as HTMLSelectElement).options).map(option=>option.textContent)).toEqual(['Hoje','Ontem','Últimos 7 dias','Últimos 15 dias','Últimos 30 dias','Últimos 90 dias','Este mês','Mês anterior','Período personalizado']);
+    await user.selectOptions(period,'custom');
+    await user.type(screen.getByLabelText('Data inicial personalizada'),'2026-10-01');
+    await user.type(screen.getByLabelText('Data final personalizada'),'2026-10-30');
+    await user.click(screen.getByRole('button',{name:'Exportar relatório'}));
+    await user.click(screen.getByRole('button',{name:'Exportar CSV'}));
+    expect(exports.csv).toHaveBeenCalledWith(expect.objectContaining({title:expect.stringContaining('2026-10-01 a 2026-10-30'),headers:expect.arrayContaining(['Motivo','Leads perdidos','Percentual','Lead','Negociação','Valor da negociação'])}),expect.stringContaining('2026-10-01'));
+  });
+
   it('oferece exportação em PDF, XLSX e CSV',async()=>{
     const user=userEvent.setup();render(<ReportsPage/>);
     await user.click(screen.getByRole('button',{name:'Exportar relatório'}));

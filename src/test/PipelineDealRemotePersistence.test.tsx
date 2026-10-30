@@ -85,7 +85,7 @@ describe('persistência remota das negociações na Pipeline',()=>{
     await user.type(screen.getByLabelText('Observação da perda'),'Cliente adiou o projeto.');
     await user.click(screen.getByRole('button',{name:'Confirmar perda'}));
     expect(remote.update).toHaveBeenCalledWith('core_deals','deal-1',expect.objectContaining({
-      stage_id:'stage-open',status:'lost',expected_close:null,
+      stage_id:'stage-open',status:'lost',loss_reason:'Preço/orçamento',lost_at:expect.any(String),expected_close:null,
       notes:'Motivo da perda: Preço/orçamento\nObservação: Cliente adiou o projeto.',
     }));
     expect(await screen.findByRole('status')).toHaveTextContent('Negociação marcada como perdida');

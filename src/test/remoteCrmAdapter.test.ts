@@ -85,6 +85,13 @@ describe("authenticated remote adapter", () => {
     );
   });
 
+  it("loads structured loss reason and loss timestamp with remote deals", async () => {
+    await bootstrapRemoteCrm(session);
+    expect(api.request).toHaveBeenCalledWith(
+      expect.stringContaining("core_deals?select=id,workspace_id,contact_id,pipeline_id,stage_id,name,value,status,loss_reason,lost_at,owner_id,expected_close,notes,created_at,updated_at"),
+    );
+  });
+
   it("does not block CRM bootstrap when the member role has no automation permission",async()=>{
     api.request.mockImplementation((path:string)=>path.includes('core_memberships')?[{...membership,role:'closer'}]:respond(path));
     api.rpc.mockImplementation((name:string)=>name==='core_automation_list'?Promise.reject(new Error('Forbidden')):name==='core_dashboard_summary'?{}:[]);

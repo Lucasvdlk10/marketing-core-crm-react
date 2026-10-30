@@ -97,3 +97,12 @@
 - Tabela de presença passou a formatar duração em horas/minutos e exportar o recorte selecionado.
 - Confirmado front-end React 18.3.1 + TypeScript + Vite + React Router; a sessão de Relatórios é composta por `ReportsPage.tsx` e componentes React.
 - O deploy do commit `b410909` foi reexecutado, mas o GitHub Pages respondeu HTTP 500 na criação da implantação; o código permanece no GitHub e aguarda nova publicação.
+
+## 30/10/2026 — Correção do relatório de motivos de perda
+
+- Causa confirmada: o bootstrap de `core_deals` não selecionava `loss_reason`; o relatório filtrava perdas pela `created_at`, não pela data do evento.
+- Adicionados `lost_at` e migration `202610300008_loss_timestamp.sql`; a Pipeline grava/limpa a data conforme a transição de status e mantém o timestamp ao editar negociação perdida.
+- O relatório lê negociações perdidas reais do snapshot do workspace e motivos cadastrados no CRM; inclui contagem de leads únicos por motivo, barras ordenadas, percentual, detalhe de leads, impacto financeiro e exportação do mesmo recorte. Períodos usam datas de calendário; relatório não apresenta dados mock.
+- Migration aplicada no `L.E.I.A CRM Staging` (ref `nsrwjtgzluadienwtnxt`). Read-back: coluna existe, migration consta no histórico, 4 negociações perdidas e 0 sem `lost_at`; consulta agregada confirmou perda de R$ 2.000 em 30/10/2026.
+- Validações focadas: **21/21**; typecheck/build aprovados; `npm audit` 0 vulnerabilidades; DB lint exit 0 com avisos preexistentes. Suíte completa paralela: 174/183; execução serial igual à CI ainda em andamento.
+- Commit/push/deploy do frontend ainda pendentes; não tratar a página pública como atualizada até validar o SHA implantado e os assets.

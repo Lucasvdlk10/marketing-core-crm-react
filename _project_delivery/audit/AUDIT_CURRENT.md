@@ -1,17 +1,27 @@
 # CRM Marketing Core — Auditoria Atual
 
-- **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
+- **Data da auditoria:** 30/10/2026
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
-- **Branch:** `main`
-- **HEAD funcional publicado:** `8b7e5b0cbeacc958052412b6a0846ef5aa67dc52`
-- **Último commit funcional:** `feat: personalizar dashboard comercial` — 30/10/2026
+- **Branch:** `main`; HEAD base `8a24aab1681b82af69e44b503b6f7af93bc129c0`; alterações locais da correção ainda não commitadas
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: AMARELO — dashboard personalizável, relatório de motivos de perda e presença/uso foram implementados e validados localmente; migrations `202610300005`, `202610300006` e `202610300007` aplicadas no staging; falta commit/push desta frente e verificação do deploy público.**
+**Estado: AMARELO — correção específica do Relatório de motivos de perda implementada localmente; migration `202610300008_loss_timestamp.sql` aplicada e confirmada no staging `L.E.I.A CRM Staging`; publicação frontend pendente.**
 
-### Atualização — importação de leads
+### Relatório de motivos de perda — 30/10/2026
+
+A causa foi confirmada no caminho de leitura: o bootstrap remoto de `core_deals` não selecionava `loss_reason`; além disso, o filtro do relatório usava `created_at`, excluindo negociações antigas perdidas no período recente. Foi adicionada persistência estruturada de `lost_at`, leitura de `loss_reason`/`lost_at`, agrupamento por lead e motivo cadastrado, período de perda, detalhamento e impacto sobre negociações reais. A tela de perdas não usa os dados mock locais.
+
+A migration `202610300008_loss_timestamp.sql` foi aplicada ao projeto remoto cujo nome e ref foram conferidos como `L.E.I.A CRM Staging` / `nsrwjtgzluadienwtnxt`. Leitura posterior confirmou a coluna `lost_at`, **4/4** negociações perdidas com timestamp e nenhum registro perdido sem data. Consulta agregada encontrou uma perda de **R$ 2.000,00** em 30/10/2026 com motivo `Sem prioridade no momento`, compatível com o registro informado pelo usuário; nenhum nome/PII foi copiado para esta auditoria.
+
+Validações: testes focados **21/21**, TypeScript aprovado, build aprovado (mantém avisos conhecidos de `config.js` e chunk acima de 500 kB), `npm audit` com **0 vulnerabilidades** e DB lint remoto com exit 0 e avisos preexistentes em funções não relacionadas. A suíte completa com workers padrão teve **174/183** aprovados e 9 falhas/timeout fora da área de relatórios; a repetição no modo serial igual ao workflow CI está em andamento.
+
+### Publicação pendente
+
+A versão React corrigida ainda não foi commitada/enviada ao GitHub Pages. Não afirmar que a interface pública mudou até validar workflow concluído para o SHA correto e verificar os assets/página pública.
+
+### Atualização histórica — importação de leads
 
 A causa da rejeição foi confirmada: o XLSX gerado pelo próprio CRM possui título e linha vazia antes do cabeçalho, enquanto o importador tratava obrigatoriamente a primeira linha como cabeçalho. O parser agora localiza a linha real de cabeçalho, ignora linhas vazias iniciais e aceita o modelo oficial e a planilha de 200 leads fornecida. Regressão automatizada adicionada para esse formato.
 

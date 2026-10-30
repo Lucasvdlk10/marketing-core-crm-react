@@ -570,6 +570,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
         stage_id: stageId,
         status: remoteOutcome?.status || stage!.outcome,
         loss_reason: remoteOutcome?.loss_reason || updated.lossReason || null,
+        lost_at: remoteOutcome?.status === "lost" ? new Date().toISOString() : remoteOutcome ? null : current?.lost_at || null,
         expected_close: updated.nextActionDate || null,
         notes: remoteOutcome?.notes ?? (updated.nextAction || null),
       });
