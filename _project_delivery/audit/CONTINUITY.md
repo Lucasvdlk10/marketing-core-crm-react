@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-A continuidade atual parte do commit funcional `88ae95fdacda547ed5f3310db387a89d6c7eec1a`, branch `main`, publicado com sucesso no GitHub Pages. O proprietário pode criar, editar, excluir e salvar funções personalizadas; as definições são persistidas em `core_workspace_roles`. O workspace principal permanece com 212 contatos e a importação `teste1.csv` registrada como 200/200 concluída.
+A continuidade atual parte da branch `main`, publicada no GitHub Pages. O proprietário pode criar, editar, excluir e salvar funções personalizadas. A ação Criar negociação das automações aceita pessoa específica ou equipe; para equipes, a engrenagem permite excluir membros e definir distribuição percentual somando 100%. A migration ponderada está no staging e o worker foi republicado. O workspace principal permanece com 212 contatos e a importação `teste1.csv` registrada como 200/200 concluída.
 
 ## Atualização contínua
 

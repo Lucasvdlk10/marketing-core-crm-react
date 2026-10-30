@@ -9,7 +9,7 @@
 
 ## Veredito executivo
 
-**Estado: VERDE — proprietário habilitado para criar e persistir funções personalizadas; importação, paginação e histórico permanecem validados; suíte completa 170/170 e publicação no GitHub Pages concluída.**
+**Estado: VERDE — proprietário habilitado para funções personalizadas; criação automatizada de negociação validada por pessoa ou equipe com exclusão de membros e distribuição percentual; importação, paginação e histórico permanecem validados; suíte completa 171/171.**
 
 ### Atualização — importação de leads
 

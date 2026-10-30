@@ -129,6 +129,29 @@ describe('authenticated pages use only the remote snapshot',()=>{
 
   it('configures deterministic weighted team assignment and rejects totals different from 100%',async()=>{mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_publish'?{rule_id:'new-rule',revision_id:'new-revision'}:{});const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:/Nova automação/i}));await user.type(screen.getByLabelText('Nome da automação'),'Distribuir vendas');await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));await user.click(screen.getByRole('button',{name:'Adicionar Criar negociação'}));await user.click(screen.getByRole('button',{name:'Configurar negociação da automação'}));await user.selectOptions(screen.getByLabelText('Responsável pela negociação'),'team:team-1');await user.click(screen.getByRole('button',{name:'Configurar distribuição da equipe'}));const ana=screen.getByLabelText('Percentual de Pessoa Remota');const bia=screen.getByLabelText('Percentual de Segunda Pessoa');await user.clear(ana);await user.type(ana,'80');expect(screen.getByRole('alert')).toHaveTextContent('100%');await user.clear(bia);await user.type(bia,'20');await user.click(screen.getByRole('button',{name:'Salvar distribuição'}));await user.selectOptions(screen.getByLabelText('Pipeline inicial'),'pipeline-1');await user.selectOptions(screen.getByLabelText('Etapa inicial'),'stage-open');await user.click(screen.getByRole('button',{name:'Salvar negociação'}));expect(screen.getByText(/Equipe Vendas · 2 pessoas · 100%/)).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Salvar automação'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_publish',expect.objectContaining({p_graph:expect.objectContaining({nodes:expect.arrayContaining([expect.objectContaining({subtype:'CREATE_DEAL',config:{team_id:'team-1',distribution:[{user_id:'user-1',percentage:80},{user_id:'user-2',percentage:20}],pipeline_id:'pipeline-1',stage_id:'stage-open'}})])})}));},15000);
 
+  it('allows excluding a team member from deal assignment',async()=>{
+    mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_publish'?{rule_id:'new-rule',revision_id:'new-revision'}:{});
+    const user=userEvent.setup();
+    render(<AutomationsPage/>);
+    await user.click(screen.getByRole('button',{name:/Nova automação/i}));
+    await user.type(screen.getByLabelText('Nome da automação'),'Equipe sem Bia');
+    await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));
+    await user.click(screen.getByRole('button',{name:'Adicionar Criar negociação'}));
+    await user.click(screen.getByRole('button',{name:'Configurar negociação da automação'}));
+    await user.selectOptions(screen.getByLabelText('Responsável pela negociação'),'team:team-1');
+    await user.click(screen.getByRole('button',{name:'Configurar distribuição da equipe'}));
+    await user.click(screen.getByRole('checkbox',{name:'Incluir Segunda Pessoa'}));
+    const ana=screen.getByLabelText('Percentual de Pessoa Remota');
+    await user.clear(ana);
+    await user.type(ana,'100');
+    await user.click(screen.getByRole('button',{name:'Salvar distribuição'}));
+    await user.selectOptions(screen.getByLabelText('Pipeline inicial'),'pipeline-1');
+    await user.selectOptions(screen.getByLabelText('Etapa inicial'),'stage-open');
+    await user.click(screen.getByRole('button',{name:'Salvar negociação'}));
+    await user.click(screen.getByRole('button',{name:'Salvar automação'}));
+    expect(mocked.rpc).toHaveBeenCalledWith('core_automation_publish',expect.objectContaining({p_graph:expect.objectContaining({nodes:expect.arrayContaining([expect.objectContaining({subtype:'CREATE_DEAL',config:{team_id:'team-1',distribution:[{user_id:'user-1',percentage:100}],pipeline_id:'pipeline-1',stage_id:'stage-open'}})])})}));
+  },15000);
+
   it('deletes a negotiation remotely after explicit confirmation without deleting its lead',async()=>{const user=userEvent.setup();render(<PipelinePage/>);await user.click(screen.getByRole('button',{name:'Ganhos'}));await user.click(screen.getByRole('button',{name:/Abrir negociação Venda remota/i}));await user.click(screen.getByRole('button',{name:'Excluir negociação'}));const dialog=screen.getByRole('dialog',{name:'Confirmar exclusão da negociação'});expect(within(dialog).getByText(/lead vinculado continuará salvo/i)).toBeInTheDocument();await user.click(within(dialog).getByRole('button',{name:'Excluir negociação'}));expect(mocked.remoteDelete).toHaveBeenCalledWith('core_deals','deal-1');expect(mocked.remoteDelete).not.toHaveBeenCalledWith('core_contacts',expect.anything());expect(screen.getByRole('status')).toHaveTextContent('Negociação excluída com sucesso.');});
 
   it('blocks publish with visible errors unless there is one trigger, an action, and complete configs',async()=>{const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:/Nova automação/i}));await user.type(screen.getByLabelText('Nome da automação'),'Inválida');await user.click(screen.getByRole('button',{name:'Adicionar Condição'}));await user.click(screen.getByRole('button',{name:'Salvar automação'}));expect(screen.getByRole('alert')).toHaveTextContent('exatamente um gatilho');await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));await user.click(screen.getByRole('button',{name:'Salvar automação'}));expect(screen.getByRole('alert')).toHaveTextContent('pelo menos uma ação');await user.click(screen.getByRole('button',{name:'Excluir Condição'}));await user.click(screen.getByRole('button',{name:'Adicionar Enviar e-mail'}));await user.click(screen.getByRole('button',{name:'Salvar automação'}));expect(screen.getByRole('alert')).toHaveTextContent('Configure o e-mail');expect(mocked.rpc).not.toHaveBeenCalledWith('core_automation_publish',expect.anything());});

@@ -38,3 +38,13 @@
 - A função Proprietário continua protegida e com acesso total.
 - Migration `202610300002_custom_workspace_roles.sql` aplicada no staging.
 - Validações: regressão RED→GREEN; testes de Configurações 6/6; suíte completa 170/170; typecheck, build e auditoria de dependências aprovados.
+
+## 30/10/2026 — Negociação de automação por pessoa ou equipe
+
+- Confirmado no editor de automações o seletor agrupado de responsável: pessoa específica ou equipe.
+- Ao selecionar uma equipe, a engrenagem abre a configuração de distribuição, permitindo excluir membros e definir percentuais personalizados por usuário.
+- A publicação exige pelo menos um membro e soma exata de 100%; o contrato persiste `team_id` e a lista `distribution`.
+- O worker usa distribuição ponderada determinística e ignora membros removidos ou inativos.
+- Migration `202610290006_automation_deal_team_assignment.sql` confirmada no staging e `core-automation-worker` republicado.
+- Adicionada regressão explícita para excluir um membro e atribuir 100% ao membro restante.
+- Validações: teste autenticado 24/24; suíte completa 171/171; typecheck, build e npm audit aprovados; 0 vulnerabilidades.
