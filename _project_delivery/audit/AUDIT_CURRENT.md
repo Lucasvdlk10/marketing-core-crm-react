@@ -3,8 +3,8 @@
 - **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
 - **Branch:** `main`
-- **HEAD funcional publicado:** `88ae95fdacda547ed5f3310db387a89d6c7eec1a`
-- **Último commit funcional:** `fix: liberar criacao de funcoes para proprietario` — 30/10/2026
+- **HEAD funcional publicado:** `ba6c92fae17d793a1c1d63ea2cfa4830939de58b`
+- **Último commit funcional:** `fix: concluir execucao e relatorios de automacoes` — 30/10/2026
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
