@@ -24,6 +24,9 @@ import {
   getRemoteSnapshot,
   restoreRemoteSnapshot,
   updateRemoteWorkspaceName,
+  getRemoteWorkspaceId,
+  isRemoteMode,
+  remoteRpc,
 } from "./lib/remoteCrm";
 
 import { startIdleSession } from "./lib/idleLogout";
@@ -130,7 +133,16 @@ export function App() {
     let active=true;
     crmApi.rpc('core_my_profile_get',{}).then(value=>{if(active)setUserProfile(normalizeUserProfile(value))}).catch(()=>{});
     return()=>{active=false};
-  },[session,remoteReady]);
+  }, [session, remoteReady]);
+  useEffect(() => {
+    if (!session || !remoteReady || !isRemoteMode()) return;
+    const workspace = getRemoteWorkspaceId();
+    void remoteRpc("core_presence_record", { p_workspace: workspace, p_status: "online" });
+    const heartbeat = window.setInterval(() => void remoteRpc("core_presence_heartbeat", { p_workspace: workspace }), 60_000);
+    const markOffline = () => void remoteRpc("core_presence_record", { p_workspace: workspace, p_status: "offline" });
+    window.addEventListener("beforeunload", markOffline);
+    return () => { window.clearInterval(heartbeat); window.removeEventListener("beforeunload", markOffline); markOffline(); };
+  }, [session, remoteReady]);
   useEffect(() => {
     if ((!session && !previewMode) || recoveryMode) return;
     recordSessionAudit(currentUser, "login");

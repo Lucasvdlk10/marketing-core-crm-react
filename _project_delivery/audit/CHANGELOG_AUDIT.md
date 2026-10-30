@@ -82,3 +82,11 @@
 - Impacto financeiro soma os valores reais das negociações perdidas no período.
 - Filtro inclui hoje, ontem, 7, 15, 30, 90 dias, mês atual, mês anterior e período personalizado.
 - Validações: ReportsPage 5/5, typecheck e build aprovados; migration aplicada no staging.
+
+## 30/10/2026 — Presença e uso do sistema
+
+- Criado histórico estruturado `core_presence_events` e RPC `core_presence_usage_report` para acumular online, reunião e ausente por usuário.
+- Login automático registra `online`, heartbeat mantém a sessão ativa e encerramento registra `offline`.
+- Relatório exibe horas por status, uso total versus período esperado, ranking implícito por tempo online e filtro por equipes personalizadas.
+- Clique no nome consulta e mostra as entradas, saídas e mudanças de status do colaborador no período.
+- Validações: ReportsPage 5/5, typecheck e migration `202610300007_presence_usage_history.sql` aplicados no staging.

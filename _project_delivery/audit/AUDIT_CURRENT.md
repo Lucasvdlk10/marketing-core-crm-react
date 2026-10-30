@@ -9,7 +9,7 @@
 
 ## Veredito executivo
 
-**Estado: AMARELO — dashboard personalizável e relatório de motivos de perda foram implementados e validados localmente; migrations `202610300005` e `202610300006` aplicadas no staging; falta commit/push desta frente e verificação do deploy público.**
+**Estado: AMARELO — dashboard personalizável, relatório de motivos de perda e presença/uso foram implementados e validados localmente; migrations `202610300005`, `202610300006` e `202610300007` aplicadas no staging; falta commit/push desta frente e verificação do deploy público.**
 
 ### Atualização — importação de leads
 

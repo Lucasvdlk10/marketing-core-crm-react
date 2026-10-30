@@ -15,6 +15,8 @@ A continuidade atual parte da branch `main`, com a Visão geral expandida para d
 
 Relatórios de motivos de perda receberam gráfico de barras ordenado, filtro de períodos (incluindo personalizado), detalhamento por clique e impacto financeiro baseado em `core_deals.loss_reason`. A migration `202610300006_loss_reason_reporting.sql` foi aplicada no staging.
 
+O Relatório de Presença passou a registrar login, logout, heartbeat e trocas de status em `core_presence_events`, com métricas por status, horas de uso versus período esperado, filtro de equipes e detalhe diário por colaborador. A migration `202610300007_presence_usage_history.sql` foi aplicada no staging.
+
 ## Atualização contínua
 
 Após qualquer alteração relevante:
