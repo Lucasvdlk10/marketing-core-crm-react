@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-A continuidade atual parte da branch `main`, publicada no GitHub Pages. O proprietário pode criar, editar, excluir e salvar funções personalizadas. A ação Criar negociação das automações aceita pessoa específica ou equipe; para equipes, a engrenagem permite excluir membros e definir distribuição percentual somando 100%. A migration ponderada está no staging e o worker foi republicado. O workspace principal permanece com 212 contatos e a importação `teste1.csv` registrada como 200/200 concluída.
+A continuidade atual parte da branch `main`. Automações baseadas em listas agora processam também os membros existentes no momento da ativação, de forma idempotente e direcionada à revisão correta. A automação `Teste` processou os 23 membros da lista `teste`: todos receberam a tag `Hulk`, tiveram negociação criada e foram movidos para a etapa configurada. A tela possui métricas por automação e relatório por etapa/lead. Migrations `202610300003` e `202610300004` estão no staging e o DB lint está limpo.
 
 ## Atualização contínua
 

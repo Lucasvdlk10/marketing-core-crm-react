@@ -9,7 +9,7 @@
 
 ## Veredito executivo
 
-**Estado: VERDE — proprietário habilitado para funções personalizadas; criação automatizada de negociação validada por pessoa ou equipe com exclusão de membros e distribuição percentual; importação, paginação e histórico permanecem validados; suíte completa 171/171.**
+**Estado: VERDE — automação por lista corrigida e validada no staging com 23/23 leads processados; métricas e relatório operacional implementados; criação de negociação por pessoa/equipe, importação, paginação e histórico permanecem validados; suíte completa 173/173 e DB lint sem erros.**
 
 ### Atualização — importação de leads
 

@@ -103,9 +103,39 @@ describe('authenticated pages use only the remote snapshot',()=>{
 
   it('lists automation rules through the authenticated remote snapshot, not localStorage',()=>{render(<AutomationsPage/>);expect(screen.getByText('Automação remota')).toBeInTheDocument();expect(screen.queryByText('Automação local')).not.toBeInTheDocument();});
 
+  it('shows automation execution metrics and opens the per-step report',async()=>{
+    mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_metrics'?[{rule_id:'rule-1',entered_count:23,running_count:2,completed_count:20,failed_count:1}]:name==='core_automation_report'?{summary:{entered:23,running:2,completed:20,failed:1},steps:[{node_id:'deal',label:'Criar negociação',reached:22,completed:21,failed:1}],leads:[{contact_id:'contact-1',contact_name:'Contato remoto',status:'running',current_step:'Criar negociação'}]}:[]);
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    expect(await screen.findByText((_,element)=>element?.textContent==='23 leads entraram')).toBeInTheDocument();
+    expect(screen.getByText((_,element)=>element?.textContent==='20 finalizaram')).toBeInTheDocument();
+    await user.click(screen.getByRole('button',{name:'Relatório Automação remota'}));
+    const dialog=await screen.findByRole('dialog',{name:'Relatório da automação Automação remota'});
+    expect(within(dialog).getAllByText('Criar negociação')).toHaveLength(2);
+    expect(within(dialog).getByText('Contato remoto')).toBeInTheDocument();
+    expect(mocked.rpc).toHaveBeenCalledWith('core_automation_report',{p_workspace:'workspace-1',p_rule_id:'rule-1'});
+  });
+
+  it('reports how many existing segment leads were queued when the automation is saved',async()=>{
+    mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_publish'?{rule_id:'new-rule',revision_id:'new-revision'}:name==='core_automation_activate'?{rule_id:'new-rule',revision_id:'new-revision',enabled:true,queued_count:23}:[]);
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    await user.click(screen.getByRole('button',{name:/Nova automação/i}));
+    await user.type(screen.getByLabelText('Nome da automação'),'Ativar lista atual');
+    await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));
+    await user.click(screen.getByRole('button',{name:'Configurar origem dos leads'}));
+    await user.selectOptions(screen.getByLabelText('Tipo de origem dos leads'),'segment');
+    await user.selectOptions(screen.getByLabelText('Origem específica dos leads'),'list-1');
+    await user.click(screen.getByRole('button',{name:'Salvar origem'}));
+    await user.click(screen.getByRole('button',{name:'Adicionar Adicionar tag'}));
+    await user.click(screen.getByRole('button',{name:'Configurar tag da automação'}));
+    await user.selectOptions(screen.getByLabelText('Selecionar tag da automação'),'VIP remoto');
+    await user.click(screen.getByRole('button',{name:'Salvar tag'}));
+    await user.click(screen.getByRole('button',{name:'Salvar automação'}));
+    expect(await screen.findByRole('status')).toHaveTextContent('23 leads existentes foram adicionados ao fluxo');
+  },15000);
+
   it('shows remote automation state and pauses/reactivates explicitly',async()=>{const user=userEvent.setup();render(<AutomationsPage/>);expect(screen.getByText('Ativa')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Pausar Automação remota'}));await user.click(screen.getByRole('button',{name:'Confirmar pausa'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_pause',{p_workspace:'workspace-1',p_rule_id:'rule-1'});expect(screen.getByText('Pausada')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Reativar Automação remota'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_activate',{p_workspace:'workspace-1',p_rule_id:'rule-1',p_revision_id:'revision-1'});});
 
-  it('opens a remote rule with zero revisions so its first graph can be built',async()=>{mocked.rpc.mockResolvedValueOnce({name:'Automação sem revisão',revisions:[]});const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:'Editar Automação remota'}));expect(await screen.findByRole('heading',{name:'Editar automação'})).toBeInTheDocument();expect(screen.getByLabelText('Nome da automação')).toHaveValue('Automação sem revisão');expect(screen.queryAllByTestId('automation-node')).toHaveLength(0);});
+  it('opens a remote rule with zero revisions so its first graph can be built',async()=>{mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_read'?{name:'Automação sem revisão',revisions:[]}:[]);const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:'Editar Automação remota'}));expect(await screen.findByRole('heading',{name:'Editar automação'})).toBeInTheDocument();expect(screen.getByLabelText('Nome da automação')).toHaveValue('Automação sem revisão');expect(screen.queryAllByTestId('automation-node')).toHaveLength(0);});
 
   it('deletes a remote automation through core_automation_delete without replacing pause',async()=>{const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:'Excluir Automação remota'}));const dialog=screen.getByRole('dialog',{name:'Excluir automação'});expect(within(dialog).getByText(/removida permanentemente/i)).toBeInTheDocument();await user.click(within(dialog).getByRole('button',{name:'Confirmar exclusão'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_delete',{p_workspace:'workspace-1',p_rule_id:'rule-1'});expect(screen.queryByText('Automação remota')).not.toBeInTheDocument();});
 

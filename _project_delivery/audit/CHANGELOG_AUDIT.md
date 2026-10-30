@@ -48,3 +48,15 @@
 - Migration `202610290006_automation_deal_team_assignment.sql` confirmada no staging e `core-automation-worker` republicado.
 - Adicionada regressão explícita para excluir um membro e atribuir 100% ao membro restante.
 - Validações: teste autenticado 24/24; suíte completa 171/171; typecheck, build e npm audit aprovados; 0 vulnerabilidades.
+
+## 30/10/2026 — Backfill e relatório operacional de automações
+
+- Causa raiz confirmada: publicar/ativar uma automação por lista não criava eventos para os membros já existentes; apenas novos eventos `LEAD_CREATED` eram consumidos. O matcher também não validava a associação do contato à lista configurada.
+- `core_automation_activate` agora enfileira de forma idempotente os contatos atuais da lista, com evento direcionado à regra/revisão ativa, e retorna `queued_count` para feedback visual.
+- `core_automation_match_active` agora respeita regra/revisão direcionada e confirma membership da lista de segmentação, evitando que automações de uma lista consumam leads de outra origem.
+- Criadas as RPCs tenant-scoped `core_automation_metrics` e `core_automation_report`, com entrada, andamento, conclusão, falha, etapa atual e desempenho por etapa.
+- Tela de Automações recebeu métricas nos cards, botão Relatório e feedback após salvar informando quantos leads existentes entraram no fluxo.
+- Migration `202610300003_automation_segment_backfill_reports.sql` aplicada no staging. Reparação idempotente processou a automação `Teste` e seus 23 membros.
+- Evidência remota: 23/23 eventos concluídos; 23/23 execuções concluídas em cada uma das três ações; 23/23 leads com tag `Hulk`, negociação criada e etapa final correta.
+- Migration `202610300004_fix_assignment_lint.sql` removeu a dependência de tabela temporária do distribuidor ponderado; `supabase db lint --linked --level error` passou sem resultados.
+- Validações: testes autenticados 26/26; suíte completa 173/173; typecheck e build aprovados; npm audit com 0 vulnerabilidades.
