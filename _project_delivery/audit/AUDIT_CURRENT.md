@@ -3,13 +3,13 @@
 - **Data da auditoria:** 29/10/2026 — atualizada após correção da importação de leads
 - **Projeto auditado:** `Versão React para testes/marketing-core-crm-react`
 - **Branch:** `main`
-- **HEAD remoto/local:** `56d3141278c8d4dd1dec7eb4a08a5d81e6845bd4`
-- **Último commit:** `test: isolar relatório local de presença` — 29/10/2026 11:44:09 -0300
+- **HEAD remoto/local validado:** `394a3e4d8dbddc11d57b67c337b31fb07bf92545`
+- **Último commit funcional:** `feat: concluir fluxo de importacao e paginacao` — 30/10/2026
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
 ## Veredito executivo
 
-**Estado: VERDE LOCAL/STAGING — importação de 200 leads confirmada no banco, workspace com 212 contatos, paginação autenticada corrigida, histórico persistente aplicado no staging e suíte completa 170/170. Publicação do frontend no GitHub Pages ainda deve ser verificada após commit/push.**
+**Estado: VERDE — importação de 200 leads confirmada no banco, workspace com 212 contatos, paginação autenticada corrigida, histórico persistente aplicado no staging, suíte completa 170/170 e publicação no GitHub Pages verificada.**
 
 ### Atualização — importação de leads
 

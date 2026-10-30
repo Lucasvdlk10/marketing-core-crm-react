@@ -11,7 +11,7 @@
 
 ## Vínculo com Git
 
-A auditoria atual foi gerada a partir do HEAD `56d3141278c8d4dd1dec7eb4a08a5d81e6845bd4`, branch `main`, com working tree local não limpa. O próximo commit que alterar o projeto deve incluir a atualização destes arquivos de auditoria e registrar no commit a relação com o estado auditado.
+A continuidade atual parte do commit funcional `394a3e4d8dbddc11d57b67c337b31fb07bf92545`, branch `main`, publicado com sucesso no GitHub Pages. O workspace principal do staging possui 212 contatos; a importação `teste1.csv` foi registrada como 200/200 concluída. A paginação autenticada e o histórico de importações são o novo ponto de partida.
 
 ## Atualização contínua
 
