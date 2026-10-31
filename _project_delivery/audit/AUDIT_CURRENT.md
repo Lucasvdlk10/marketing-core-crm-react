@@ -5,6 +5,10 @@
 - **Branch:** `main` limpa em `origin/main` no release commit `aa3d579bfbc7c357d3219bf922e3cc35031ae547`; inclui o commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95`. GitHub Pages workflow `41132042334` concluiu com sucesso nesse SHA.
 - **Meta:** 100% das funções críticas verificadas por testes automatizados, typecheck, build e auditoria de dependências.
 
+### Interatividade do funil da Visão geral — 30/10/2026
+
+Os totais de “Abertas” e “Ganhas” no card Funil do período agora são botões acessíveis e abrem o drawer lateral existente com as negociações correspondentes, respeitando período e equipe já aplicados pelo dashboard. A lista de abertas deriva de `openDeals`; a de ganhas deriva de `wonDeals`. Implementação local em `src/pages/DashboardPage.tsx` e estilo em `src/styles.css`; regressão com leads sintéticos em `src/test/DashboardMobileLayout.test.tsx`. Teste focal: 3/3 aprovado. Typecheck aprovado; build de produção aprovado (com avisos preexistentes de chunk grande e `config.js`). `npm audit --audit-level=moderate`: 0 vulnerabilidades. Suíte completa serial: 43/43 arquivos e 193/193 testes aprovados. Ainda não commitado, enviado ou publicado; sem validação no Supabase/produção.
+
 ## Veredito executivo
 
 **Estado: VERDE para a correção global mobile. O commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95` está no release `aa3d579bfbc7c357d3219bf922e3cc35031ae547`; CI e deploy GitHub Pages concluíram no workflow `41132042334`. CSS/JS públicos respondem HTTP 200 e seus hashes coincidem com `dist/`.**

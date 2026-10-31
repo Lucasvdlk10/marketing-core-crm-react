@@ -184,3 +184,4 @@
   .page-intro{gap:12px;margin-bottom:18px}
   .header-actions{width:100%;flex-wrap:wrap}
 }
+.dashboard-funnel-row{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;border:0;border-radius:12px;background:#f6f8fc;color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:background .16s ease,transform .16s ease}.dashboard-funnel-row:hover{background:#edf1f8;transform:translateY(-1px)}.dashboard-funnel-row:focus-visible{outline:2px solid var(--violet);outline-offset:2px}.dashboard-funnel-row strong{font-weight:800}

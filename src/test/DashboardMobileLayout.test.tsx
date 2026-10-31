@@ -3,7 +3,7 @@ import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {DashboardPage} from '../pages/DashboardPage';
 
 const state=vi.hoisted(()=>({rpc:vi.fn(),width:390,layout:{i:'leads',x:0,y:0,w:1,h:1}}));
-const snapshot={workspace:{id:'workspace-mobile',name:'Marketing Core'},membership:{role:'owner'},rolePermissions:[],summary:null,contacts:[],deals:[],stages:[],pipelines:[],teamGroups:[],members:[],tasks:[],tags:[],contactTags:[],notifications:[],campaigns:[],segmentLists:[],segmentMembers:[],automations:[],importHistory:[]};
+const snapshot={workspace:{id:'workspace-mobile',name:'Marketing Core'},membership:{role:'owner'},rolePermissions:[],summary:null,contacts:[],deals:[{id:'deal-open-1',name:'Lead aberto exemplo',status:'open',created_at:'2026-10-12T12:00:00.000Z',updated_at:'2026-10-12T12:00:00.000Z',value:1500,owner_id:null},{id:'deal-won-1',name:'Lead ganho exemplo',status:'won',created_at:'2026-10-10T12:00:00.000Z',updated_at:'2026-10-15T12:00:00.000Z',value:2500,owner_id:null},{id:'deal-lost-1',name:'Lead perdido exemplo',status:'lost',created_at:'2026-10-11T12:00:00.000Z',updated_at:'2026-10-16T12:00:00.000Z',value:500,owner_id:null}],stages:[],pipelines:[],teamGroups:[],members:[],tasks:[],tags:[],contactTags:[],notifications:[],campaigns:[],segmentLists:[],segmentMembers:[],automations:[],importHistory:[]};
 
 vi.mock('react-grid-layout',()=>({
   ResponsiveGridLayout:({children,onDragStop,dragConfig}:any)=><><button type="button" data-testid="simulate-mobile-layout-change" onClick={()=>onDragStop?.([state.layout])}>simulate</button><div className="react-grid-layout" data-testid="responsive-grid" data-drag-enabled={dragConfig?.enabled}>{children}</div></>,
@@ -24,6 +24,22 @@ describe('dashboard mobile layout',()=>{
     expect(screen.getByText('Funil do período')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('simulate-mobile-layout-change'));
     await waitFor(()=>expect(state.rpc).not.toHaveBeenCalledWith('core_dashboard_preferences_save',expect.anything()));
+  });
+
+  it('opens the period funnel rows with only matching open and won deals',async()=>{
+    render(<DashboardPage/>);
+
+    fireEvent.click(await screen.findByRole('button',{name:'Ver 1 negociações abertas'}));
+    expect(screen.getByRole('dialog',{name:'Detalhes de Negociações abertas'})).toBeInTheDocument();
+    expect(screen.getByText('Lead aberto exemplo')).toBeInTheDocument();
+    expect(screen.queryByText('Lead ganho exemplo')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Fechar detalhes'}));
+
+    fireEvent.click(screen.getByRole('button',{name:'Ver 1 negociações ganhas'}));
+    expect(screen.getByRole('dialog',{name:'Detalhes de Negociações ganhas'})).toBeInTheDocument();
+    expect(screen.getByText('Lead ganho exemplo')).toBeInTheDocument();
+    expect(screen.queryByText('Lead aberto exemplo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lead perdido exemplo')).not.toBeInTheDocument();
   });
 
   it('keeps the desktop grid interactive and saves its customized layout',async()=>{

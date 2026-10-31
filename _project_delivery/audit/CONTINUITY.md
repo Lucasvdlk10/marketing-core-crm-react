@@ -38,3 +38,7 @@ Após qualquer alteração relevante:
 - atualizar `AUDIT_CURRENT.md` com data, HEAD, resultados e pendências;
 - conferir `git diff --stat` e `git status`;
 - após push, confirmar o hash remoto antes de declarar entrega.
+
+## Retomada atual — funil interativo
+
+Implementação local em progresso: no card “Funil do período”, Abertas e Ganhas abrem o drawer com listas separadas de negociações e respeitam filtros atuais. Alterados `src/pages/DashboardPage.tsx`, `src/styles.css` e teste `src/test/DashboardMobileLayout.test.tsx`. Teste focal 3/3, typecheck, build e audit (0 vulnerabilidades) aprovados; suíte serial concluída com 43/43 arquivos e 193/193 testes aprovados. Próximo passo: rever `git diff`, publicar o commit autorizado e validar workflow/SHA/assets no site antes de anunciar a mudança no CRM online.

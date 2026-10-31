@@ -1,3 +1,11 @@
+## 30/10/2026 — Detalhamento interativo do funil do Dashboard
+
+- **Solicitação:** permitir clicar em Abertas e Ganhas no card Funil do período e identificar as negociações/leads correspondentes.
+- **Implementação:** ambas as linhas são controles de botão acessíveis; abrem o drawer existente. Abertas apresenta `openDeals`, Ganhas apresenta `wonDeals`; filtros de período/equipe do Dashboard são preservados.
+- **Arquivos:** `src/pages/DashboardPage.tsx`, `src/styles.css`, `src/test/DashboardMobileLayout.test.tsx`.
+- **Evidências:** teste focal 3/3; typecheck e build passaram; audit reportou 0 vulnerabilidades. Suíte completa repetida serialmente: 43/43 arquivos e 193/193 testes aprovados; a execução paralela anterior teve 9 timeouts de concorrência em testes de outras páginas.
+- **Estado de entrega:** alteração local não commitada nem publicada; deploy e UI remota ainda não validados.
+
 # Histórico de alterações auditadas
 
 ## 29/10/2026 — Compatibilidade da importação com a planilha modelo
