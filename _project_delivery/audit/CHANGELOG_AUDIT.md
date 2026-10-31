@@ -5,7 +5,8 @@
 - **Testes:** `leadPayload.test.ts`, `LeadIngestionActivity.test.tsx`, `leadRecordsRemote.test.ts` — 11/11 aprovados; suíte completa serial: 45/45 arquivos, 199/199 testes; typecheck e build aprovados (avisos de `config.js` sem `type=module` e chunk grande); audit 0 vulnerabilidades.
 - **Projeto alvo:** ref da configuração React `nsrwjtgzluadienwtnxt`; sem PII, contagem antes da mudança: 9 eventos no workspace Marketing Core, 6 `chat-captacao`, último em 30/10/2026 21:13 BRT. Projeto distinto `L.E.I.A CRM` não foi alterado.
 - **Supabase:** migration aplicada; `supabase migration list` confirma histórico local/remoto alinhado. Teste SQL sintético em subtransação: 3 envios (parcial, completo, parcial), 3 atividades completas, mapeamento/merge, retry duplicado e 1 automação; subtransação revertida e zero resíduos. `core-webhook-v2` deployed, versão 5, `verify_jwt=false`.
-- **Estado:** backend pronto; publicação React/UI, build final, commit/push, workflow GitHub Pages e conferência SHA/assets pendentes. Payload da amostra antiga não está persistido; reenvio do Leads Hub é necessário para criar evento histórico.
+- **Entrega:** migration `20261031012321` e `core-webhook-v2` versão 5 aplicadas ao projeto Supabase da configuração React; histórico de migrations local/remoto alinhado. Teste sintético dentro de subtransação (3 partes, retry, merge, automação) passou e foi revertido sem resíduos. Commit `6b7a8b6bbf27ddec0fa32fa39c2536f926d5bb20` em `origin/main`; workflow GitHub Pages `41158295537` sucesso. Página e favicon/JS/CSS HTTP 200, hashes dos ativos iguais a `dist/`; JS contém `Recebimento de lead`, CSS contém `lead-ingestion-fields`.
+- **Limite/ação:** não foi enviado lead real para evitar criar registro persistente. Payload da amostra antiga não está persistido (só hash); reenvie pelo Leads Hub para gerar o evento histórico com o novo formato.
 
 ## 30/10/2026 — Detalhamento interativo do funil do Dashboard
 
