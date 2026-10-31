@@ -26,9 +26,14 @@ Deno.serve(async req=>{
  const idem=await fallbackIdempotency(raw,`lead-ingestion-v1:${/^[A-Za-z0-9._:-]{8,180}$/.test(providedIdem)?providedIdem:'body'}`);
  try{
   env('SUPABASE_URL');env('SUPABASE_SERVICE_ROLE_KEY');
-  const workspace=routedWebhook
-   ? await rpc('core_workspace_webhook_authorize',{p_public_id:publicId,p_token:key})
-   : await rpc('core_ingest_authorize_v2',{p_key:key});
+  if(routedWebhook){
+   const authorization=await rpc('core_workspace_webhook_authorize_v2',{p_public_id:publicId,p_token:key}) as {workspace_id?:string;webhook_id?:string;rate_limited?:boolean;retry_after_seconds?:number}|null;
+   if(authorization?.rate_limited)return json(429,{error:'Rate limit',retry_after_seconds:authorization.retry_after_seconds||60});
+   if(!authorization?.workspace_id||!authorization.webhook_id)return json(401,{error:'Integration inactive or unauthorized'});
+   const result=await rpc('core_ingest_webhook_lead_v2',{p_workspace:authorization.workspace_id,p_key:idem,p_payload:p,p_webhook_id:authorization.webhook_id});
+   return json(result.duplicate?200:201,{ok:true,auth_mode:apiKey?'api_key':'hmac',...result});
+  }
+  const workspace=await rpc('core_ingest_authorize_v2',{p_key:key});
   if(!workspace)return json(401,{error:'Integration inactive or unauthorized'});
   const result=await rpc('core_ingest_lead_v2',{p_workspace:workspace,p_key:idem,p_payload:p});
   return json(result.duplicate?200:201,{ok:true,auth_mode:apiKey?'api_key':'hmac',...result});

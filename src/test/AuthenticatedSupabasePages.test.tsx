@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {MemoryRouter} from 'react-router-dom';
 
-const mocked=vi.hoisted(()=>({rpc:vi.fn(),remoteInsert:vi.fn(),remoteUpdate:vi.fn(),remoteDelete:vi.fn(),snapshot:null as any}));
+const mocked=vi.hoisted(()=>({rpc:vi.fn(),remoteInsert:vi.fn(),remoteUpdate:vi.fn(),remoteDelete:vi.fn(),listWebhooks:vi.fn(),snapshot:null as any}));
 vi.mock('../lib/remoteCrm',()=>({
   getRemoteSnapshot:()=>mocked.snapshot,
   getRemoteWorkspaceId:()=>mocked.snapshot?.workspace.id||'',
@@ -14,6 +14,7 @@ vi.mock('../lib/remoteCrm',()=>({
   remoteRpc:mocked.rpc,
   REMOTE_UPDATED_EVENT:'marketing-core-remote-updated'
 }));
+vi.mock('../lib/webhooks',()=>({listWebhooks:mocked.listWebhooks}));
 
 import {CampaignsPage} from '../pages/CampaignsPage';
 import {SegmentsPage} from '../pages/SegmentsPage';
@@ -38,7 +39,7 @@ const baseSnapshot={
 };
 
 describe('authenticated pages use only the remote snapshot',()=>{
-  beforeEach(()=>{mocked.snapshot=structuredClone(baseSnapshot);mocked.rpc.mockReset().mockResolvedValue([]);mocked.remoteInsert.mockReset().mockResolvedValue({});mocked.remoteUpdate.mockReset().mockResolvedValue({});mocked.remoteDelete.mockReset().mockResolvedValue({});localStorage.clear();localStorage.setItem('marketing_core_segment_lists',JSON.stringify([{id:'local',name:'Segmento local',leads:99}]));localStorage.setItem('marketing_core_automations',JSON.stringify([{id:'local',name:'Automação local',nodes:[],connections:[],createdAt:'hoje'}]));});
+  beforeEach(()=>{mocked.snapshot=structuredClone(baseSnapshot);mocked.rpc.mockReset().mockResolvedValue([]);mocked.remoteInsert.mockReset().mockResolvedValue({});mocked.remoteUpdate.mockReset().mockResolvedValue({});mocked.remoteDelete.mockReset().mockResolvedValue({});mocked.listWebhooks.mockReset().mockResolvedValue([]);localStorage.clear();localStorage.setItem('marketing_core_segment_lists',JSON.stringify([{id:'local',name:'Segmento local',leads:99}]));localStorage.setItem('marketing_core_automations',JSON.stringify([{id:'local',name:'Automação local',nodes:[],connections:[],createdAt:'hoje'}]));});
 
   it('renders campaigns from core_campaigns',()=>{render(<CampaignsPage/>);expect(screen.getByText('Campanha remota')).toBeInTheDocument();expect(screen.getByText((value)=>value.replace(/\s/g,' ')==='R$ 5.000')).toBeInTheDocument();});
 
@@ -136,6 +137,72 @@ describe('authenticated pages use only the remote snapshot',()=>{
   it('shows remote automation state and pauses/reactivates explicitly',async()=>{const user=userEvent.setup();render(<AutomationsPage/>);expect(screen.getByText('Ativa')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Pausar Automação remota'}));await user.click(screen.getByRole('button',{name:'Confirmar pausa'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_pause',{p_workspace:'workspace-1',p_rule_id:'rule-1'});expect(screen.getByText('Pausada')).toBeInTheDocument();await user.click(screen.getByRole('button',{name:'Reativar Automação remota'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_activate',{p_workspace:'workspace-1',p_rule_id:'rule-1',p_revision_id:'revision-1'});});
 
   it('opens a remote rule with zero revisions so its first graph can be built',async()=>{mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_read'?{name:'Automação sem revisão',revisions:[]}:[]);const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:'Editar Automação remota'}));expect(await screen.findByRole('heading',{name:'Editar automação'})).toBeInTheDocument();expect(screen.getByLabelText('Nome da automação')).toHaveValue('Automação sem revisão');expect(screen.queryAllByTestId('automation-node')).toHaveLength(0);});
+
+  it('shows and saves a created Leads Hub webhook as the automation entry source',async()=>{
+    mocked.listWebhooks.mockResolvedValue([{id:'webhook-1',public_id:'public-id',name:'Testando',url:'https://example.invalid/hook',enabled:true,created_at:'2026-10-31T12:00:00Z',last_used_at:null}]);
+    mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_publish'?{rule_id:'new-rule',revision_id:'new-revision'}:{});
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    await user.click(screen.getByRole('button',{name:/Nova automação/i}));
+    await user.type(screen.getByLabelText('Nome da automação'),'Negociação via Testando');
+    await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));
+    await user.click(screen.getByRole('button',{name:'Configurar origem dos leads'}));
+    await user.selectOptions(screen.getByLabelText('Tipo de origem dos leads'),'webhook');
+    expect(await screen.findByRole('option',{name:'Testando'})).toBeInTheDocument();
+    expect(screen.getByRole('option',{name:'Todos os webhooks ativos'})).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Origem específica dos leads'),'webhook-1');
+    await user.click(screen.getByRole('button',{name:'Salvar origem'}));
+    await user.click(screen.getByRole('button',{name:'Adicionar Criar tarefa'}));
+    await user.click(screen.getByRole('button',{name:'Configurar tarefa da automação'}));
+    await user.selectOptions(screen.getByLabelText('Selecionar tarefa configurada'),'Fazer primeiro contato');
+    await user.click(screen.getByRole('button',{name:'Salvar tarefa'}));
+    await user.click(screen.getByRole('button',{name:'Salvar automação'}));
+    expect(mocked.rpc).toHaveBeenCalledWith('core_automation_publish',expect.objectContaining({p_graph:expect.objectContaining({nodes:expect.arrayContaining([expect.objectContaining({type:'trigger',subtype:'WEBHOOK_RECEIVED',config:expect.objectContaining({source_type:'webhook',source_id:'webhook-1',source_label:'Testando'})})])})}));
+  },15000);
+
+  it('does not save an existing webhook source when its reload fails',async()=>{
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    await user.click(screen.getByRole('button',{name:/Nova automação/i}));
+    await user.type(screen.getByLabelText('Nome da automação'),'Webhook fail-safe');
+    await user.click(screen.getByRole('button',{name:'Adicionar Lead entra no fluxo'}));
+    await user.click(screen.getByRole('button',{name:'Configurar origem dos leads'}));
+    mocked.listWebhooks.mockResolvedValueOnce([{id:'webhook-1',public_id:'public-id',name:'Testando',url:'https://example.invalid/hook',enabled:true,created_at:'2026-10-31T12:00:00Z',last_used_at:null}]);
+    await user.selectOptions(screen.getByLabelText('Tipo de origem dos leads'),'webhook');
+    expect(await screen.findByRole('option',{name:'Testando'})).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Origem específica dos leads'),'webhook-1');
+    await user.click(screen.getByRole('button',{name:'Salvar origem'}));
+    await user.click(screen.getByRole('button',{name:'Configurar origem dos leads'}));
+    mocked.listWebhooks.mockRejectedValueOnce(new Error('reload failed'));
+    await user.selectOptions(screen.getByLabelText('Tipo de origem dos leads'),'segment');
+    await user.selectOptions(screen.getByLabelText('Tipo de origem dos leads'),'webhook');
+    expect(await screen.findByRole('alert')).toHaveTextContent('reload failed');
+    const save=screen.getByRole('button',{name:'Salvar origem'});
+    expect(save).toBeDisabled();
+    await user.click(save);
+    expect(save).toBeDisabled();
+    expect(screen.getByRole('dialog',{name:'Configurar origem dos leads'})).toBeInTheDocument();
+    expect(mocked.rpc.mock.calls.filter(([name])=>name==='core_automation_publish')).toHaveLength(0);
+    await user.click(within(screen.getByRole('dialog',{name:'Configurar origem dos leads'})).getByRole('button',{name:'Cancelar'}));
+    expect(screen.getByText('Testando')).toBeInTheDocument();
+  });
+
+  it('preserves and saves the all-active-webhooks source when reopening a trigger',async()=>{
+    mocked.listWebhooks.mockResolvedValue([{id:'webhook-1',public_id:'public-id',name:'Testando',url:'https://example.invalid/hook',enabled:true,created_at:'2026-10-31T12:00:00Z',last_used_at:null}]);
+    mocked.rpc.mockImplementation(async(name:string)=>{
+      if(name==='core_automation_read')return {name:'Automação wildcard',enabled:true,active_revision_id:'revision-1',revisions:[{id:'revision-1',graph:{schema_version:'1',nodes:[{id:'trigger',type:'trigger',subtype:'WEBHOOK_RECEIVED',position:{x:10,y:10},config:{source_type:'webhook',source_id:'webhook-all',source_label:'Todos os webhooks ativos'}},{id:'task',type:'action',subtype:'CREATE_TASK',position:{x:200,y:10},config:{template_id:'Fazer primeiro contato',template_title:'Fazer primeiro contato'}}],edges:[{id:'edge-1',source:'trigger',target:'task'}]}}]};
+      if(name==='core_automation_publish')return {rule_id:'rule-1',revision_id:'revision-2'};
+      return [];
+    });
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    await user.click(screen.getByRole('button',{name:'Editar Automação remota'}));
+    expect(await screen.findAllByTestId('automation-node')).toHaveLength(2);
+    await user.click(screen.getByRole('button',{name:'Configurar origem dos leads'}));
+    expect(await screen.findByRole('option',{name:'Testando'})).toBeInTheDocument();
+    const source=screen.getByLabelText('Origem específica dos leads');
+    expect(source).toHaveValue('webhook-all');
+    await user.click(screen.getByRole('button',{name:'Salvar origem'}));
+    await user.click(screen.getByRole('button',{name:'Salvar alterações'}));
+    expect(mocked.rpc).toHaveBeenCalledWith('core_automation_publish',expect.objectContaining({p_graph:expect.objectContaining({nodes:expect.arrayContaining([expect.objectContaining({type:'trigger',subtype:'WEBHOOK_RECEIVED',config:expect.objectContaining({source_type:'webhook',source_id:'webhook-all'})})])})}));
+  });
 
   it('deletes a remote automation through core_automation_delete without replacing pause',async()=>{const user=userEvent.setup();render(<AutomationsPage/>);await user.click(screen.getByRole('button',{name:'Excluir Automação remota'}));const dialog=screen.getByRole('dialog',{name:'Excluir automação'});expect(within(dialog).getByText(/removida permanentemente/i)).toBeInTheDocument();await user.click(within(dialog).getByRole('button',{name:'Confirmar exclusão'}));expect(mocked.rpc).toHaveBeenCalledWith('core_automation_delete',{p_workspace:'workspace-1',p_rule_id:'rule-1'});expect(screen.queryByText('Automação remota')).not.toBeInTheDocument();});
 

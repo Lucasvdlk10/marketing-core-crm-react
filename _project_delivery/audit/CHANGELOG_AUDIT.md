@@ -145,3 +145,107 @@
 - Release `aa3d579bfbc7c357d3219bf922e3cc35031ae547` (contendo o commit funcional `7421a2ff7cc4a47ec4136233e8b35742eb65db95`) enviado para `origin/main`. GitHub Pages workflow `41132042334` concluiu com sucesso no SHA do release.
 - Verificação pública: index da aplicação aponta para CSS `assets/index-CMeS1aXy.css` e JS `assets/index-mQVsila3.js`; ambos HTTP 200, marcadores de menu/busca presentes e SHA-256 coincidente com `dist/`: CSS `6408ddd8bcf1383431fabd54d92449d65ce3e5645632a96b9f1e7b7ac4e9b44b`, JS `cd7975ac52bc4408d8239bceb28638aced01244b751bd485f22c5bac82a1562c`.
 - Próximo: usuário recarregar a aplicação no mobile; se persistir a queixa, validar a sessão/viewport real e priorizar tela específica sem tocar no desktop.
+
+## 31/10/2026 — Origem de webhook selecionável nas automações
+
+- Causa: o construtor de automação apresentava um identificador fixo em vez de consultar os webhooks existentes. O caminho de ingestão autorizava o endpoint mas não preservava seu ID para o matcher das automações.
+- `AutomationsPage` agora consulta a lista de webhooks no workspace ao abrir a origem Webhook; permite selecionar pelo nome, mantém inativos identificados e grava `source_id`/`source_label`. Regressão antes da implementação falhou por ausência de “Testando”; após a implementação passou.
+- Migration `20261031023137_automation_webhook_entry_source.sql` aplicada no Supabase `nsrwjtgzluadienwtnxt`. A função de ingestão agora associa cada evento ao webhook autenticado e o matcher respeita a origem exata; opções wildcard e legado mantidas.
+- `core-webhook-v2` v6, `verify_jwt=false`, verificada no projeto correto. Fixture SQL sintética transitória confirmou source ID exato, não correspondência de outro webhook, opção todos e compatibilidade legada; rollback e read-back sem resíduos.
+- Testes: AutomationsPage autenticada 27/27; suíte serial 45/45 arquivos e 200/200 testes; typecheck, build, npm audit (0 vulnerabilidades), esbuild do Edge e scan de whitespace nas linhas adicionadas aprovados. Avisos conhecidos de `config.js` e chunk >500 kB permanecem. LEIA Packager Pro: `blocked`, score 63, `safe_to_deliver=false`, 0 bloqueios e 45 findings de baseline (heurísticas em bundles, sinks existentes e fixtures); não declarar o pacote completo pronto. Pages ainda aguarda commit/push e validação do workflow.
+- Smoke test real no Leads Hub não executado para evitar criar lead/negociação persistentes sem autorização; não houve envio real.
+
+## 31/10/2026 — Correções pós-revisão de origem de webhook
+
+- Revisão pré-commit inicial não aprovada: contador de rate limit era revertido pela exceção; fonte legado podia casar evento sem identidade de webhook; handler não bloqueava salvamento via chamada direta durante erro/loading. Implementadas correções locais: migration forward-only `20261031033521_webhook_rate_limit_and_match_guard.sql` retorna JSON `rate_limited` e exige `source_webhook_id` em exacto/wildcard/legado; Edge retorna 429; handler agora valida loading/erro e teste fail-safe foi adicionado.
+- Validação do validador: comparação normalizada `202610290006` vs `20261031023137` iguala byte a byte/hash `c7235678…303c3c5` após retirar apenas `source_label` permitido e sua regra string 1–80. Comparação do matcher base com `20261031033521`, após retirar só o novo predicate guard, também iguala byte a byte/hash `746d75f7…342b1939`.
+- Evidências locais: teste focal 2/2, typecheck, bundle Edge esbuild e dry-run Supabase aprovados; suíte 45/45 arquivos e 201/201 testes. Dry-run lista somente migration `33521`; ela e a Edge v7 ainda não foram aplicadas. Fixture SQL transacional de rate limit e correspondência adicionada, não executada no banco.
+- Packager Pro permanece `blocked` (score 63, `safe_to_deliver=false`, 0 bloqueios e 45 findings de baseline); não apresentar pacote completo como pronto. Sem commit/push/publicação e sem lead real.
+
+## 31/10/2026 — Re-review final e preservação do wildcard
+
+- Re-review independente #2 reprovou: ao abrir um gatilho salvo com `source_id='webhook-all'`, o reload async de webhooks não reconhecia o ID sintético e substituía a escolha pelo primeiro ID real; também exigiu rollout ordenado por causa do rate-limit legado da migration já aplicada.
+- TDD: teste `preserves and saves the all-active-webhooks source when reopening a trigger` falhou inicialmente de forma esperada (`webhook-1` no lugar de `webhook-all`); `AutomationsPage` agora preserva o wildcard na conclusão do fetch; o mesmo teste passou (1/1). O teste cobre salvar/republicar o source ID após reabrir o modal.
+- A migration aplicada `20261031023137` permanece imutável. `20261031033521` documenta rollout seguro: aplicar migration enquanto Edge v6 permanece (v6 rejeita objeto rate_limited sem workspace_id e não ingere); então deploy Edge v7 para HTTP 429. Fresh installs aplicam migrations antes da Edge. Ainda nenhum deploy desta correção.
+- Suite final após o ajuste: 45/45 arquivos e 202/202 testes; typecheck/build/esbuild passaram, com avisos de build conhecidos; `npm audit` 0 vulnerabilidades; dry-run mostra apenas migration `33521`; comparação normalizada do validador e matcher mantém os hashes do baseline. Novo teste wildcard RED→GREEN. A Edge v7 e migration 33521 ainda não foram aplicadas; sem lead real.
+
+## 31/10/2026 — Terceira revisão independente (bloqueio)
+
+- Re-review #3 retornou `passed:false`, sem preocupações de segurança e com três erros de lógica/validação: migration 23137 isolada ainda perde o incremento do limite; fixture SQL não atravessa 60 sucessos e 61ª negação e altera contexto diretamente, sem caminho API-key; teste fail-safe React muda `button.disabled=false` antes do clique e não prova a interação normal.
+- O limite de dois ciclos de correção/re-review definido pelo procedimento foi atingido. Parar alterações funcionais e não aplicar migration, implantar Edge, commit/push ou publicar até Lucas decidir se autoriza ciclo adicional. Os artefatos permanecem staged/local; sem envio real de lead.
+
+## 31/10/2026 — Ciclo adicional autorizado (re-review #4 pendente)
+
+- Lucas autorizou um ciclo adicional após o re-review #3. Nenhum migration, Edge, commit, push ou Pages foi alterado nesta rodada.
+- Implementados localmente: gate de deploy sequenciado (`scripts/deploy-core-webhook-v2.mjs`), testes mockados do gate, contrato SQL rollback-only para 60/61, autenticação→ingestão de dois webhooks e caminho API-key sem `source_webhook_id`, e teste React sem mutar `disabled`.
+- Evidência final local: gate mockado 7/7; teste React focado 1/1; suíte Vitest 45/45 arquivos e 202/202 testes; `npm run typecheck` e `npm run build` passaram; bundle Edge passou no esbuild; `npm audit --audit-level=moderate` encontrou 0 vulnerabilidades; dry-run Supabase listou apenas 33521 pendente; verificação de whitespace/sintaxe passou.
+- O contrato SQL ainda não foi executado: `supabase status` informou que Docker/Podman não está instalado. A migration `20261031033521` continua pendente no remoto `nsrwjtgzluadienwtnxt`; Edge v6 segue ACTIVE com `verify_jwt=false`. Gate executável inclui a fixture após migration/listagem alinhada e antes de Edge v7; ele não foi executado.
+- Próximo passo seguro: concluir a suíte, solicitar revisão independente #4 do diff combinado e, se aprovada, executar o gate de release; depois commit/push e verificar Pages. Não enviar lead real sem autorização específica por criar dado persistente.
+
+## 31/10/2026 — Re-review #4 reprovada; pausa para decisão
+
+- Revisão independente do diff completo retornou `passed=false`, `security_concerns=[]` e dois `logic_errors`: (1) o gate aceita migrations antigas que já estão alinhadas local/remoto; (2) o fixture lê o denial e `hits=61` dentro da subtransação, mas depois a encerra com rollback sentinela.
+- A leitura do requisito original é que migrations históricas alinhadas são permitidas; o gate exige 23137 aplicada, 33521 local e bloqueia qualquer outro pending/divergente. O rollback final é intencional para não persistir fixtures; o denial estruturado e o contador 61 são verificados antes desse rollback. Ainda assim, a revisão falhou e não pode ser ignorada sem adjudicação explícita.
+- A única rodada extra autorizada terminou sem mudanças após o review. Mantidos os arquivos staged; nenhum commit, push, migration, deploy, Pages ou envio real foi feito. Packager Pro permanece `blocked`, score 62, `safe_to_deliver=false`, 0 findings bloqueantes e 46 findings baseline.
+- Aguardar decisão de Lucas antes de iniciar outra correção/re-review ou publicação. A fixture SQL continua sem execução local por ausência de Docker/Podman; o gate de release não foi executado.
+
+## 31/10/2026 — Novo ciclo #5 autorizado após re-review #4
+
+- Lucas autorizou uma correção/re-review adicional direcionada. Achados a resolver: gate deve rejeitar migrations não pertencentes ao baseline exato mesmo quando alinhadas local/remoto; limite 60/61 deve ser verificado após commit, não apenas antes do rollback.
+- Autorização específica concedida para teste sintético em transações separadas: gravar temporariamente apenas workspace/webhook de teste (sem lead/contato), comprovar `hits=61` em leitura após commit, limpar e verificar zero resíduos. Não autoriza migration/deploy/commit/push nesta fase.
+- Estado inicial remoto read-only: migrations históricas alinhadas; `20261031033521` local pendente; `core-webhook-v2` v6 ACTIVE/`verify_jwt=false`. Difusão do ciclo #4 permanece staged; auditoria atualizada em working tree.
+- Próximo passo: implementação TDD, validação local, gate de re-review independente #5. Não aplicar migration nem executar teste remoto até o review passar; não enviar lead real.
+
+## 31/10/2026 — Ciclo #5 implementado localmente; revisão #5 pendente
+
+- O gate agora pinna o conjunto de 62 migrations já alinhadas no ledger vinculado e permite somente o alvo `20261031033521`; rejeita migration extra mesmo alinhada e verifica conjunto exato pré/pós-push.
+- Adicionado probe de rate limit multi-transação: user/workspace/webhook sintéticos, sem membership/lead/contato; 60 authorizations válidas, 61ª negação estruturada, readback separado `hits=61`, cleanup por IDs/markers exatos e verificação de zero resíduo. Token é passado por stdin e não vai a argv/log. Cleanup falho, readback falho ou resíduo bloqueia deploy.
+- A fixture SQL rollback-only continua cobrindo identidade webhook→ingestão→outbox, dois webhooks, match exato/diferente/wildcard/legado e API-key sem identidade; removido o teste 60/61 de dentro da subtransação.
+- TDD RED→GREEN documentado nos testes: falhas iniciais para migration alinhada não permitida e fases do probe ausentes; resultado final do gate mockado 11/11.
+- Validação: Vitest 45/45 arquivos, 202/202 testes; typecheck; build (avisos `config.js` sem `type=module` e chunk principal >500 kB); `npm audit` 0 vulnerabilidades; dry-run Supabase somente migration 33521; `git diff --check HEAD` e `node --check` passaram.
+- Não executados: probe SQL ao vivo, fixture SQL, release gate, migration push, Edge deploy, commit/push/Pages ou lead. Docker/Podman local ausente e 33521 segue pendente; Edge v6 ACTIVE/`verify_jwt=false`. Aguardar revisão independente #5; Packager segue `blocked`/`safe_to_deliver=false`.
+
+## 31/10/2026 — Re-review #5 reprovada; ciclo pausado
+
+- A revisão independente `deleg_d0c5f25e` retornou `passed=false`, com 1 security concern e 1 logic uncertainty.
+- Security concern: rate cleanup deleta linhas por `webhook_id` e segredos por nome depois do check de workspace, sem vincular cada delete ao registro de webhook/secret exatamente criado pelo probe. Correção potencial: deletar rate via join ao webhook sintético completo e remover somente `vault_secret_id` lido desse registro; se faltar, falhar em zero-residue e bloquear deploy.
+- Logic uncertainty: a verificação de `supabase db query` por stdin confirmou só transporte, não a semântica de commit/readback entre invocações. O probe e fixture não foram executados ao vivo; migration 33521 segue pendente, e não se aplicou migration nem deploy.
+- O ciclo #5 autorizado terminou reprovado; após mensagem de autorização ampla de Lucas, iniciado ciclo #6. Não se altera migration aplicada 23137. Nenhuma migration/deploy remota ocorreu ainda; migration 33521 segue pendente e Edge v6 ativa.
+
+## 31/10/2026 — Ciclo #6 local, correção de ownership no cleanup
+
+- Achado do review #5 tratado com TDD: teste mockado RED antes da correção, depois GREEN. Cleanup exige workspace sintético exato e webhook com ID/workspace/public_id/name/created_by e token digest; rate rows são deletadas somente via join ao webhook exato; Vault secret é deletado somente pelo `vault_secret_id` ligado ao webhook. Removida exclusão por nome.
+- Adicionado `--contracts-only` à release gate para executar db push + probe multi-transação + fixture rollback-only, parando antes de Edge deploy; útil para demonstrar commit/readback ao vivo sem publicar código antes da re-review.
+- Validação local final: `npm run test:deploy-gate` 13/13; Vitest 45/45 arquivos, 202/202 testes; `npm run typecheck`, `npm run build`, `npm audit --audit-level=moderate` (0 vulnerabilidades), `node --check` e `git diff --check HEAD` passaram. Build emitiu os avisos existentes de `config.js` sem `type=module` e chunk >500 kB.
+- Contrato ao vivo: a primeira execução `--contracts-only` aplicou a migration e executou o rate probe até readback/cleanup, mas a fixture falhou com PostgreSQL `42P01` porque as duas chamadas `core_workspace_webhook_create(...)` referenciavam alias `h` sem declará-lo. Regressão TDD ficou RED, as duas chamadas ganharam `AS h`, e a fixture direta passou com todos os resíduos em zero. A nova execução completa `--contracts-only` terminou exit 0: 60 autorizações aceitas, 61ª denial estruturada, committed_hits=61, cleanup zero-residue, fixture rollback-only passou; Edge deploy explicitamente pulado.
+- Readback remoto pós-probe: ledger local/remoto alinhado em 63 versões (62 históricas + `20261031033521`); Edge `core-webhook-v2` permanece ACTIVE v6/`verify_jwt=false`; consulta de resíduo sintético retornou zero workspace/user/webhook/API key/contato. Nenhuma Edge v7, commit/push ou Pages ainda.
+- Próximo passo: compilar bundle completo e obter re-review independente #6 com evidência live. Após aprovação, executar gate completo para Edge v7, ler estado de volta, e então commit/push/Pages. Próximas tarefas recuperadas: regressões para campos extras/envios parciais/retries e validar ingestão no Supabase/CRM corretos; preferir synthetic data e não usar lead pessoal.
+
+## 2026-10-31 — Review #6 remediation and live revalidation
+
+- Review #6 failed closed on probe-context cleanup coverage, allowing the already-applied target migration in default precheck, and incomplete rollback-fixture residue checks. Corrected only those reported areas plus their regressions.
+- Files changed: `scripts/deploy-core-webhook-v2.mjs`, `scripts/deploy-core-webhook-v2.node.mjs`, `supabase/tests/20261031033521_webhook_rate_limit_match_guard.sql`; audit/continuity files updated for evidence. The applied migration remains untouched.
+- TDD: release-gate and context-failure tests were observed RED before fixes; an additional fixture assertion went RED because the former second `DO` block could not access captured local IDs. After consolidation, `npm run test:deploy-gate` passes 15/15. Full Vitest 45/45 files and 202/202 tests, typecheck, build, audit (0 vulnerabilities), both Node syntax checks, and `git diff --check HEAD` pass. Build still emits the existing `config.js` module-type and large-chunk warnings.
+- Fixture residue verification now runs after the rollback subtransaction in the same outer PL/pgSQL scope, with direct checks for rate rows by exact webhook/key IDs and Vault secrets by captured secret IDs, plus user/profile/membership, audit, automation/outbox, ingestion/activity/link, contact and deal rows. No broad DELETEs.
+- Live revalidation: direct rollback fixture and `npm run deploy:core-webhook-v2 -- --resume-after-contracts --contracts-only` both exit 0 on `nsrwjtgzluadienwtnxt`. The exact 63-version ledger is aligned; rate probe reports 60 accepted + structured denial #61, distinct committed readback `hits=61`, cleanup and zero residue; fixture direct assertions pass. Separate aggregate readback shows zero synthetic workspaces/users/webhooks/API keys/contacts. Edge remains ACTIVE v6 with `verify_jwt=false`; no v7 deploy, commit, push, or Pages publish.
+- Existing mixed staged/worktree state and index were preserved. Independent review #7 and release remain pending; no real lead was sent.
+- Re-check of next tasks: `test-ingress-history` remains justified because unit-level cases do not prove all RPC conflict/linking/merge/automation behaviors; historical rollback SQL evidence should be re-run or completed with focused assertions. `validate-deploy-ingress` remains justified because prior Pages/staging evidence is historical; after approved release, verify the current Pages SHA/runtime config and one clearly marked synthetic browser submission with exact cleanup/readback, targeting only the React CRM Supabase project.
+
+## 2026-10-31 — Review #7 remediation and live revalidation
+
+- Review #7 failed closed on cleanup gating, undocumented legacy identity semantics, incomplete direct-ID residue checks, and ambiguous current release status. Fixed only those findings and added regressions.
+- Files changed: `scripts/deploy-core-webhook-v2.mjs`, `scripts/deploy-core-webhook-v2.node.mjs`, `supabase/tests/20261031033521_webhook_rate_limit_match_guard.sql`, plus audit/continuity docs. Applied migrations 23137 and 33521 were not edited.
+- Final compatibility rule is explicit: legacy source identifier `webhook-lead-created` continues to match identified authenticated webhook events; API-key `WEBHOOK_RECEIVED` events without `source_webhook_id` match neither exact, wildcard, nor legacy webhook sources. This is the forward-migration 33521 contract; migration 23137 remains an immutable historical intermediate.
+- Cleanup now queries the exact webhook and secret only after exact synthetic workspace ownership is confirmed; the webhook predicate binds ID/workspace/public_id/name/created_by/token digest. Rate deletion remains joined to that webhook; Vault deletion uses only its captured `vault_secret_id`.
+- Rollback fixture captures generated IDs for ingestion, activity, audit/platform audit, automation events/deliveries/continuations, contacts/deals; it verifies these directly after nested rollback and checks submission links by exact workspace+submission ID composite keys. It also checks exact rate and Vault IDs, profile/membership, rules/revisions, and parent IDs.
+- TDD: gate regressions were RED at 14/18 before fixes, then GREEN 18/18. Full tests: 45/45 files, 202/202 tests; typecheck/build passed; `npm audit --audit-level=moderate` 0 vulnerabilities; both Node syntax checks and `git diff --check HEAD` passed. Existing build warnings remain (`config.js` module type and >500 kB chunk).
+- Live: direct rollback fixture and `npm run deploy:core-webhook-v2 -- --resume-after-contracts --contracts-only` exit 0 on `nsrwjtgzluadienwtnxt`. Exact 63-version ledger; 60 valid authorizations + structured #61 denial, distinct committed `hits=61`, cleanup and zero-residue readback; fixture direct-ID assertions passed. Edge remains ACTIVE v6/`verify_jwt=false`; no v7 deploy, commit, push, Pages, browser submission or real lead.
+- Current webhook release status is now prominent at the top of `AUDIT_CURRENT.md`; historical ingestion publication is labeled separately. Independent review #8 was followed by approval from independent review #9. Ingestion regression and current Pages/CRM validation remain justified.
+
+## 2026-10-31 — Independent review #9 and Edge v7 staging release
+
+- Review #8’s only logic concern claimed that identified webhook events could not match the legacy source. The source condition and live rollback fixture showed the claim was false: identified webhook event requires `source_webhook_id` and asserts `v_legacy=1`; API-key event without identity asserts zero exact/wildcard/legacy matches. Independent re-review #9 (`deleg_3b3b49bb`) approved all 13 reviewed paths and confirmed no security or logic findings.
+- Pre-deploy project readback: `L.E.I.A CRM Staging`, ref `nsrwjtgzluadienwtnxt`, `ACTIVE_HEALTHY`, `sa-east-1`; migration ledger 63 local / 63 remote, exact equality, target `20261031033521` present.
+- After approval, `npm run deploy:core-webhook-v2 -- --resume-after-contracts` exited 0. The script skipped `db push`, reran rate and identity contracts, verified 60 accepted + structured denial #61, separate committed `hits=61`, exact cleanup and zero residue, then deployed with explicit `--no-verify-jwt`.
+- Independent post-deploy readback: `core-webhook-v2` ACTIVE v7, `verify_jwt=false`; migration ledger remains 63/63 exact. Aggregate synthetic readback returned zero workspaces, users, webhooks, Vault secrets and contacts. No real lead/contact was sent.
+- Git commit/push, Pages workflow, public asset verification and browser submission remain pending; no publication has yet been claimed.

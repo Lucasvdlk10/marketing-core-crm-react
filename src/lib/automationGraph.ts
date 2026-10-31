@@ -24,7 +24,7 @@ export function automationGraphFromUi(nodes:UiFlowNode[],connections:UiConnectio
  return {schema_version:'1',nodes:nodes.map(node=>{
   const contract=nodeContract(node);
   const config:Record<string,unknown>={};
-  if(node.entrySource)Object.assign(config,{source_type:node.entrySource.type,source_id:node.entrySource.id});
+  if(node.entrySource){Object.assign(config,{source_type:node.entrySource.type,source_id:node.entrySource.id});if(node.entrySource.type==='webhook')config.source_label=node.entrySource.label.slice(0,80)}
   if(node.taskTemplate)config.title=node.taskTemplate.title;
   if(node.emailConfig)Object.assign(config,node.emailConfig);
   if(node.whatsappConfig)Object.assign(config,node.whatsappConfig);
