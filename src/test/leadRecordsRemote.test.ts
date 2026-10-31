@@ -20,14 +20,14 @@ vi.mock('../lib/remoteCrm',()=>({
  refreshRemoteCrm:remote.refresh
 }));
 
-import {deleteLeadRecord,importLeadRecords,saveLeadRecord} from '../lib/leadRecords';
+import {deleteLeadRecord,getEffectiveLeads,importLeadRecords,saveLeadRecord} from '../lib/leadRecords';
 import {saveLeadTags} from '../lib/leadTags';
 
 const lead:MockLead={id:'contact-1',name:'Contato',email:'contato@example.com',phone:'31999999999',company:'Empresa',source:'Indicação',status:'Qualificado',createdAt:'01/10/2026'};
 
 beforeEach(()=>{
  remote.snapshot={
-  contacts:[{id:'contact-1',workspace_id:'workspace-1',name:'Contato',email:'contato@example.com',phone:'31999999999',company:'Empresa',source:'Indicação',status:'qualified',notes:null,custom_fields:null,created_at:'2026-10-01T00:00:00Z',updated_at:'2026-10-01T00:00:00Z'}],
+  contacts:[{id:'contact-1',workspace_id:'workspace-1',name:'Contato',email:'contato@example.com',phone:'31999999999',company:'Empresa',source:'Site',campaign:'chat-captacao',source_url:'https://marketingcore.com.br/',consent:true,consent_at:'2026-10-01T00:00:00Z',utm:{source:'newsletter'},status:'qualified',notes:null,custom_fields:null,created_at:'2026-10-01T00:00:00Z',updated_at:'2026-10-01T00:00:00Z'}],
   tags:[{id:'tag-1',workspace_id:'workspace-1',name:'VIP',color:'#000'},{id:'tag-2',workspace_id:'workspace-1',name:'Quente',color:'#f00'}],
   contactTags:[{workspace_id:'workspace-1',contact_id:'contact-1',tag_id:'tag-1'}]
  };
@@ -39,6 +39,10 @@ beforeEach(()=>{
 });
 
 describe('authenticated lead persistence',()=>{
+ it('maps campaign, consent and attribution from the remote contact',()=>{
+  expect(getEffectiveLeads()[0]).toMatchObject({campaign:'chat-captacao',source:'Site',sourceUrl:'https://marketingcore.com.br/',consent:true,consentAt:'2026-10-01T00:00:00Z',utm:{source:'newsletter'}});
+ });
+
  it('awaits contact edits and notes, then refreshes',async()=>{
   await saveLeadRecord({lead:{...lead,name:'Contato Atualizado'},tags:['VIP'],notes:[{id:'note-1',text:'Retornar amanhã',createdAt:'agora'}]});
   expect(remote.update).toHaveBeenCalledWith('core_contacts','contact-1',expect.objectContaining({name:'Contato Atualizado',notes:'Retornar amanhã'}),false);

@@ -1,4 +1,4 @@
-export type MockLead={id:string;name:string;email:string;phone:string;company:string;cpf?:string;cnpj?:string;source:string;status:'Novo'|'Qualificado'|'Oportunidade'|'Cliente';createdAt:string};
+export type MockLead={id:string;name:string;email:string;phone:string;company:string;cpf?:string;cnpj?:string;source:string;campaign?:string;sourceUrl?:string;consent?:boolean;consentAt?:string|null;utm?:Record<string,unknown>;status:'Novo'|'Qualificado'|'Oportunidade'|'Cliente';createdAt:string};
 export type MockOpportunity={id:string;leadId:string;name:string;company:string;contact:string;stage:'Qualificação'|'Diagnóstico'|'Proposta'|'Negociação'|'Ganho';value:number;nextAction:string};
 const first=['Ana','Bruno','Carolina','Daniel','Eduarda','Felipe','Gabriela','Henrique','Isabela','João','Karina','Lucas','Mariana','Nicolas','Olívia','Paulo','Renata','Samuel','Talita','Vinícius'];
 const last=['Almeida','Barbosa','Carvalho','Dias','Esteves','Ferreira','Gomes','Lima','Martins','Nogueira','Oliveira','Pereira','Rocha','Santos','Silva','Teixeira'];

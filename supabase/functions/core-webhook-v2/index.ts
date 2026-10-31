@@ -23,7 +23,7 @@ Deno.serve(async req=>{
  let p:ReturnType<typeof normalizeLeadPayload>;
  try{p=normalizeLeadPayload(JSON.parse(raw));}catch{return json(422,{error:'Invalid lead payload'});}
  const providedIdem=(req.headers.get('idempotency-key')||'').trim();
- const idem=/^[A-Za-z0-9._:-]{8,180}$/.test(providedIdem)?providedIdem:await fallbackIdempotency(raw);
+ const idem=await fallbackIdempotency(raw,`lead-ingestion-v1:${/^[A-Za-z0-9._:-]{8,180}$/.test(providedIdem)?providedIdem:'body'}`);
  try{
   env('SUPABASE_URL');env('SUPABASE_SERVICE_ROLE_KEY');
   const workspace=routedWebhook

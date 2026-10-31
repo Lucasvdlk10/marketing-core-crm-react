@@ -1,3 +1,12 @@
+## 30/10/2026 — Recepção de payload completo e multipartido do Leads Hub (deploy Supabase concluído; publicação UI pendente)
+
+- **Causa:** o RPC `core_ingest_lead` persistia hash e resumo genérico, não o JSON; faltava `submission_id`; payloads parciais eram rejeitados e chaves idempotentes reutilizadas entre partes conflituavam.
+- **Mudanças:** normalizador preserva campos originais e aceita parte sem identidade quando vinculável; idempotência compõe header e corpo; migration `20261031012321_lead_ingestion_activity_payload.sql` cria vínculo por envio, associa eventos às atividades e evita reexecutar automações para partes; perfil busca e mostra cada payload; inclui campanha/consentimento/atribuição no mapeamento remoto.
+- **Testes:** `leadPayload.test.ts`, `LeadIngestionActivity.test.tsx`, `leadRecordsRemote.test.ts` — 11/11 aprovados; suíte completa serial: 45/45 arquivos, 199/199 testes; typecheck e build aprovados (avisos de `config.js` sem `type=module` e chunk grande); audit 0 vulnerabilidades.
+- **Projeto alvo:** ref da configuração React `nsrwjtgzluadienwtnxt`; sem PII, contagem antes da mudança: 9 eventos no workspace Marketing Core, 6 `chat-captacao`, último em 30/10/2026 21:13 BRT. Projeto distinto `L.E.I.A CRM` não foi alterado.
+- **Supabase:** migration aplicada; `supabase migration list` confirma histórico local/remoto alinhado. Teste SQL sintético em subtransação: 3 envios (parcial, completo, parcial), 3 atividades completas, mapeamento/merge, retry duplicado e 1 automação; subtransação revertida e zero resíduos. `core-webhook-v2` deployed, versão 5, `verify_jwt=false`.
+- **Estado:** backend pronto; publicação React/UI, build final, commit/push, workflow GitHub Pages e conferência SHA/assets pendentes. Payload da amostra antiga não está persistido; reenvio do Leads Hub é necessário para criar evento histórico.
+
 ## 30/10/2026 — Detalhamento interativo do funil do Dashboard
 
 - **Solicitação:** permitir clicar em Abertas e Ganhas no card Funil do período e identificar as negociações/leads correspondentes.

@@ -8,6 +8,11 @@ export type RemoteContact = {
   phone: string | null;
   company: string | null;
   source: string | null;
+  campaign?: string | null;
+  source_url?: string | null;
+  consent?: boolean;
+  consent_at?: string | null;
+  utm?: Record<string, unknown> | null;
   owner_id: string | null;
   status: "new" | "contacted" | "qualified" | "customer" | "lost";
   notes: string | null;
@@ -142,6 +147,7 @@ export type RemoteAutomation = {
 };
 export type RemoteRolePermission={role:string;permission:string;enabled:boolean};
 export type RemoteImportHistory={id:string;workspace_id:string;requested_by:string;file_name:string;source_type:string;total_rows:number;imported_rows:number;failed_rows:number;status:'COMPLETED'|'PARTIAL'|'FAILED';created_at:string};
+export type RemoteContactActivity={id:string;workspace_id:string;contact_id:string;kind:string;body:string|null;created_at:string};
 export type RemoteSnapshot = {
   workspace: RemoteWorkspace;
   membership: RemoteMember;
@@ -217,6 +223,11 @@ async function select<T>(table: string, query: string): Promise<T[]> {
   if (!crmApi) throw Error("Supabase não configurado.");
   return crmApi.request(`/rest/v1/${table}?${query}`) as Promise<T[]>;
 }
+export async function listRemoteContactActivities(contactId:string):Promise<RemoteContactActivity[]> {
+  const workspace=getRemoteWorkspaceId();
+  if(!workspace||!contactId)return [];
+  return select<RemoteContactActivity>("core_activities",`select=id,workspace_id,contact_id,kind,body,created_at&workspace_id=eq.${encode(workspace)}&contact_id=eq.${encode(contactId)}&order=created_at.desc,id.desc&limit=100`);
+}
 export async function bootstrapRemoteCrm(
   session: Session,
   preferredWorkspace?: string,
@@ -266,7 +277,7 @@ export async function bootstrapRemoteCrm(
   ] = await Promise.all([
     select<RemoteContact>(
       "core_contacts",
-      `select=id,workspace_id,name,email,phone,company,source,status,owner_id,notes,custom_fields,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
+      `select=id,workspace_id,name,email,phone,company,source,campaign,source_url,consent,consent_at,utm,status,owner_id,notes,custom_fields,created_at,updated_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
     ),
     select<RemotePipeline>(
       "core_pipelines",

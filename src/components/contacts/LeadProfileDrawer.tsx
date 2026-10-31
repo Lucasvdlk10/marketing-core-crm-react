@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   mockOpportunities,
   mockTasks,
@@ -13,7 +13,10 @@ import {
   type LeadRecord,
 } from "../../lib/leadRecords";
 import { currentCapability } from "../../lib/effectivePermissions";
+import { isRemoteMode, listRemoteContactActivities, type RemoteContactActivity } from "../../lib/remoteCrm";
 type Action = "edit" | "note" | "delete" | "tags" | null;
+const activityFields=(body:string|null):Array<[string,unknown]>=>{try{const value=JSON.parse(body||"");return value&&typeof value==="object"&&!Array.isArray(value)?Object.entries(value):[]}catch{return[]}};
+const activityValue=(value:unknown)=>typeof value==="string"?value:JSON.stringify(value);
 export function LeadProfileDrawer({
   lead,
   onClose,
@@ -24,6 +27,9 @@ export function LeadProfileDrawer({
   const canWrite = currentCapability("contacts.write");
   const canDelete = currentCapability("contacts.delete");
   const [record, setRecord] = useState<LeadRecord>(() => getLeadRecord(lead));
+  const [activities,setActivities]=useState<RemoteContactActivity[]>([]);
+  const [activityLoading,setActivityLoading]=useState(false);
+  const [activityError,setActivityError]=useState("");
   const [action, setAction] = useState<Action>(null);
   const [edit, setEdit] = useState(record.lead);
   const [note, setNote] = useState("");
@@ -32,6 +38,12 @@ export function LeadProfileDrawer({
   const [actionError, setActionError] = useState("");
   const availableTags = getAllLeadTags();
   const current = record.lead;
+  useEffect(()=>{
+    if(!isRemoteMode()){setActivities([]);setActivityLoading(false);return}
+    let active=true;setActivityLoading(true);setActivityError("");
+    void listRemoteContactActivities(lead.id).then(rows=>{if(active)setActivities(rows)}).catch(()=>{if(active)setActivityError("Não foi possível carregar as atividades deste lead.")}).finally(()=>{if(active)setActivityLoading(false)});
+    return()=>{active=false};
+  },[lead.id]);
   const deals = mockOpportunities.filter((item) => item.leadId === current.id);
   const tasks = mockTasks.filter((item) => item.leadId === current.id);
   const initials = current.name
@@ -210,11 +222,11 @@ export function LeadProfileDrawer({
               </div>
               <div>
                 <span>Campanha</span>
-                <strong>{current.source}</strong>
+                <strong>{current.campaign || "Não informada"}</strong>
               </div>
               <div>
                 <span>Origem</span>
-                <strong>{current.source}</strong>
+                <strong>{current.source || "Não informada"}</strong>
               </div>
               <div>
                 <span>Cadastro</span>
@@ -222,7 +234,7 @@ export function LeadProfileDrawer({
               </div>
             </div>
             <p className="section-note lead-consent">
-              Consentimento: não informado
+              Consentimento: {current.consent === true ? "Sim" : current.consentAt ? "Não" : "Não informado"}
             </p>
           </section>
           <section className="lead-drawer-section">
@@ -263,6 +275,15 @@ export function LeadProfileDrawer({
           <section className="lead-drawer-section">
             <h3>Histórico de atividades</h3>
             <div className="lead-timeline">
+              {activities.map((activity)=>{
+                const fields=activityFields(activity.body);
+                const title=activity.kind==="ingest"?"Recebimento de lead":activity.kind==="note"?"Nota registrada":activity.kind;
+                return <div className="lead-timeline-item lead-ingestion-event" key={activity.id}>
+                  <strong>{title}</strong>
+                  {fields.length?<dl className="lead-ingestion-fields">{fields.map(([key,value])=><div key={key}><dt>{key}</dt><dd>{activityValue(value)}</dd></div>)}</dl>:activity.body&&<p>{activity.body}</p>}
+                  <small>{new Date(activity.created_at).toLocaleString("pt-BR")}</small>
+                </div>;
+              })}
               {record.notes.map((item) => (
                 <div className="lead-timeline-item note" key={item.id}>
                   <strong>Nota registrada</strong>
@@ -278,7 +299,9 @@ export function LeadProfileDrawer({
                 </div>
               ))}
             </div>
-            {!record.notes.length && !tasks.length && (
+            {activityLoading&&<p className="section-note" role="status">Carregando histórico…</p>}
+            {activityError&&<p className="form-error" role="alert">{activityError}</p>}
+            {!activityLoading&&!activityError&&!activities.length&&!record.notes.length&&!tasks.length && (
               <p className="section-note">Sem atividades registradas.</p>
             )}
           </section>
