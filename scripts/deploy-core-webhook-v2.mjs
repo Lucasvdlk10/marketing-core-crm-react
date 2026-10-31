@@ -6,8 +6,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 export const EXPECTED_REF='nsrwjtgzluadienwtnxt';
-export const PREVIOUS_MIGRATION='20261031023137';
-export const REQUIRED_MIGRATION='20261031033521';
+export const PREVIOUS_MIGRATION='20261031033521';
+export const REQUIRED_MIGRATION='20261031120500';
 export const APPROVED_BASELINE_MIGRATIONS=Object.freeze([
   '202610160001',
   '202610180001','202610180002','202610180003','202610180004','202610180005',
@@ -16,7 +16,7 @@ export const APPROVED_BASELINE_MIGRATIONS=Object.freeze([
   '202610280001','202610280002','202610280003','202610280004','202610280005','202610280006','202610280007','202610280008','202610280009','202610280010','202610280011','202610280012','202610280013','202610280014','202610280015','202610280016',
   '202610290001','202610290002','202610290003','202610290004','202610290005','202610290006','202610290007',
   '202610300001','202610300002','202610300003','202610300004','202610300005','202610300006','202610300007','202610300008',
-  '20261031012321','20261031023137'
+  '20261031012321','20261031023137','20261031033521'
 ]);
 const APPROVED_MIGRATIONS=new Set([...APPROVED_BASELINE_MIGRATIONS,REQUIRED_MIGRATION]);
 const MIGRATION_LIST_ARGS=['migration','list','--linked','--output-format','json'];
@@ -307,6 +307,9 @@ export function runRelease({root=path.resolve(path.dirname(fileURLToPath(import.
   }
   const rateLimitContract=runRateLimitContract(run,createRateProbeContext);
   run(['db','query','--linked','--file','supabase/tests/20261031033521_webhook_rate_limit_match_guard.sql']);
+  run(['db','query','--linked','--file','supabase/tests/20261031120500_lead_ingestion_activity_history.sql']);
+  const afterContracts=run(MIGRATION_LIST_ARGS);
+  assertMigrationState(afterContracts,{afterPush:true});
   if(!deploy)return {projectRef:EXPECTED_REF,migration:REQUIRED_MIGRATION,contractsVerified:true,rateLimitContract,deployed:false};
 
   run(['functions','deploy','core-webhook-v2','--project-ref',EXPECTED_REF,'--no-verify-jwt']);

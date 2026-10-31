@@ -33,8 +33,9 @@ describe('contratos da API', () => {
     const fetcher=vi.fn().mockResolvedValue(new Response(JSON.stringify({id:'user-1'}),{status:200}));
     const api=createCrmApi({url:'https://staging.example.com',anonKey:'public-key-that-is-long-enough'},fetcher);
     api.setSession({access_token:'access',refresh_token:'refresh',expires_at:9999999999});
-    await api.updatePassword('nova-senha-segura');
-    expect(fetcher).toHaveBeenCalledWith('https://staging.example.com/auth/v1/user',expect.objectContaining({method:'PUT',body:JSON.stringify({password:'nova-senha-segura'})}));
+    const updateFixture = 'synthetic-fixture-value';
+    await api.updatePassword(updateFixture);
+    expect(fetcher).toHaveBeenCalledWith('https://staging.example.com/auth/v1/user',expect.objectContaining({method:'PUT',body:JSON.stringify({password:updateFixture})}));
   });
 
   it('envia login ao endpoint Supabase Auth de staging', async () => {

@@ -13,9 +13,9 @@ const BASELINE_MIGRATIONS=[
   '202610280001','202610280002','202610280003','202610280004','202610280005','202610280006','202610280007','202610280008','202610280009','202610280010','202610280011','202610280012','202610280013','202610280014','202610280015','202610280016',
   '202610290001','202610290002','202610290003','202610290004','202610290005','202610290006','202610290007',
   '202610300001','202610300002','202610300003','202610300004','202610300005','202610300006','202610300007','202610300008',
-  '20261031012321','20261031023137'
+  '20261031012321','20261031023137','20261031033521'
 ];
-assert.equal(BASELINE_MIGRATIONS.length,62,'Pin the exact linked project migration baseline');
+assert.equal(BASELINE_MIGRATIONS.length,63,'Pin the exact linked project migration baseline');
 assert.deepEqual(APPROVED_BASELINE_MIGRATIONS,BASELINE_MIGRATIONS,'Release allowlist must match the reviewed remote baseline');
 
 function fixtureRoot(projectRef=EXPECTED_REF){
@@ -24,12 +24,12 @@ function fixtureRoot(projectRef=EXPECTED_REF){
   writeFileSync(path.join(root,'supabase','.temp','project-ref'),projectRef);
   return root;
 }
-function migrationState({pending33521=true,extraPending=false,extraAligned=false}={}){
+function migrationState({pendingTarget=true,extraPending=false,extraAligned=false}={}){
   return {migrations:[
     ...BASELINE_MIGRATIONS.map(version=>({local:version,remote:version})),
-    {local:'20261031033521',remote:pending33521?'':'20261031033521'},
-    ...(extraPending?[{local:'20261031040000',remote:''}]:[]),
-    ...(extraAligned?[{local:'20261031099999',remote:'20261031099999'}]:[])
+    {local:'20261031120500',remote:pendingTarget?'':'20261031120500'},
+    ...(extraPending?[{local:'20261031120600',remote:''}]:[]),
+    ...(extraAligned?[{local:'20261031120601',remote:'20261031120601'}]:[])
   ]};
 }
 const migrationArgs=['migration','list','--linked','--output-format','json'];
@@ -42,7 +42,7 @@ function releaseExecute({rateHits=61,residueRows=null,failPhase=null,extraAligne
     calls.push({args,input});
     if(args[0]==='migration'){
       migrationReads++;
-      return JSON.stringify(migrationState({pending33521:preApplied?false:migrationReads===1,extraAligned}));
+      return JSON.stringify(migrationState({pendingTarget:preApplied?false:migrationReads===1,extraAligned}));
     }
     if(args[0]==='functions'&&args[1]==='list')return JSON.stringify(functionState);
     if(args[0]==='db'&&args[1]==='query'&&args.includes('--file'))return JSON.stringify({rows:[{result:'PASS'}]});
@@ -83,9 +83,48 @@ test('default release rejects a pre-applied target; resume requires exact alignm
         assert.equal(state.calls.some(call=>call.args[0]==='db'&&call.args[1]==='push'),false);
         assert.ok(state.calls.some(call=>call.input?.includes('-- LEIA_RATE_LIMIT_PHASE: authorize')));
         assert.ok(state.calls.some(call=>call.args[0]==='db'&&call.args.includes('--file')));
+        assert.equal(state.calls.filter(call=>call.args[0]==='migration').length,2,'Resume must recheck exact migration alignment after contracts');
       }
       assert.equal(state.calls.some(call=>call.args[0]==='functions'&&call.args[1]==='deploy'),false);
     }
+  }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('resume release rechecks migrations after contracts and blocks Edge deploy if history drifts',()=>{
+  const root=fixtureRoot();
+  const state=releaseExecute({preApplied:true});
+  let migrationReads=0;
+  const execute=(args,input)=>{
+    const output=state.execute(args,input);
+    if(args[0]==='migration'&&++migrationReads===2){
+      return JSON.stringify(migrationState({pendingTarget:false,extraPending:true}));
+    }
+    return output;
+  };
+  try{
+    assert.throws(()=>runRelease({root,execute,resumeAfterContracts:true}),/unexpected|pending|migration set/i);
+    assert.equal(migrationReads,2);
+    assert.ok(state.calls.some(call=>call.args[0]==='db'&&call.args.includes('--file')),'All database contracts run before the final state read');
+    assert.equal(state.calls.some(call=>call.args[0]==='functions'&&call.args[1]==='deploy'),false);
+  }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('contracts-only rejects migration drift after contracts before reporting success',()=>{
+  const root=fixtureRoot();
+  const state=releaseExecute();
+  let migrationReads=0;
+  const execute=(args,input)=>{
+    const output=state.execute(args,input);
+    if(args[0]==='migration'&&++migrationReads===3){
+      return JSON.stringify(migrationState({pendingTarget:false,extraPending:true}));
+    }
+    return output;
+  };
+  try{
+    assert.throws(()=>runRelease({root,execute,deploy:false}),/unexpected|pending|migration set/i);
+    assert.equal(migrationReads,3);
+    assert.ok(state.calls.some(call=>call.args[0]==='db'&&call.args.includes('--file')),'All database contracts run before the final state read');
+    assert.equal(state.calls.some(call=>call.args[0]==='functions'&&call.args[1]==='deploy'),false);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 
@@ -180,13 +219,45 @@ test('rollback fixture checks generated IDs and composite keys for every synthet
   assert.match(residueBlock,/FROM public\.core_automation_rule_revisions WHERE id=ANY/i);
 });
 
-test('audit front matter states current webhook release status separately from historical ingestion publication',()=>{
+test('forward migration tracks server-only ingestion v2 wrappers and multipart history assertions',()=>{
+  const migration=readFileSync(new URL('../supabase/migrations/20261031120500_core_ingest_v2_rpc_wrappers.sql',import.meta.url),'utf8');
+  const fixture=readFileSync(new URL('../supabase/tests/20261031120500_lead_ingestion_activity_history.sql',import.meta.url),'utf8');
+  assert.match(migration,/create or replace function public\.core_ingest_authorize_v2\(p_key text\)/i);
+  assert.match(migration,/create or replace function public\.core_ingest_lead_v2\(/i);
+  assert.match(migration,/revoke all on function public\.core_ingest_authorize_v2\(text\) from public, anon, authenticated/i);
+  assert.match(migration,/grant execute on function public\.core_ingest_authorize_v2\(text\) to service_role/i);
+  assert.match(migration,/revoke all on function public\.core_ingest_lead_v2\(uuid,text,jsonb\) from public, anon, authenticated/i);
+  assert.match(migration,/grant execute on function public\.core_ingest_lead_v2\(uuid,text,jsonb\) to service_role/i);
+  assert.match(migration,/set search_path to ''/i);
+  assert.match(migration,/return public\.core_ingest_lead\(p_workspace,p_key,p_payload\)/i);
+  assert.match(fixture,/public\.core_ingest_authorize_v2\(v_api_key\)/i);
+  assert.match(fixture,/if auth\.role\(\) is distinct from 'service_role'/i);
+  assert.match(fixture,/public\.core_ingest_lead_v2\(/i);
+  assert.match(fixture,/v_expected_outbox<>1 or v_unexpected_outbox<>0/i);
+  assert.match(fixture,/v_changed_conflict_detected boolean/i);
+  assert.match(fixture,/if not v_changed_conflict_detected then raise exception/i);
+  assert.match(fixture,/v_partial_activity_count<>1/i);
+  assert.match(fixture,/v_complete_activity_count<>1/i);
+  assert.match(fixture,/v_followup_activity_count<>1/i);
+  assert.match(fixture,/v_activity_count<>3/i);
+  assert.match(migration,/service_role/i);
+  assert.doesNotMatch(migration,/set_config|request\.jwt\.claims/i);
+  assert.match(fixture,/v_residuals<>0/i);
+  assert.match(fixture,/cardinality\(v_outer_rate_buckets\)<>1/i);
+  assert.match(fixture,/bucket=any\(v_outer_rate_buckets\)/i);
+});
+
+test('audit front matter distinguishes historical baseline from applied current ingress release',()=>{
   const audit=readFileSync(new URL('../_project_delivery/audit/AUDIT_CURRENT.md',import.meta.url),'utf8').slice(0,1600);
   assert.match(audit,/CURRENT WEBHOOK RELEASE STATUS/i);
+  assert.ok(audit.includes('64 local / 64 remote'));
+  assert.ok(audit.includes('20261031120500'));
+  assert.ok(audit.includes('applied in staging'));
   assert.match(audit,/staging validated/i);
-  assert.match(audit,/Edge v6 active/i);
-  assert.match(audit,/Edge v7[^\n]*pending/i);
-  assert.match(audit,/Git publication, Pages, and browser submission pending/i);
+  assert.ok(audit.includes('all database contracts passed'));
+  assert.match(audit,/Edge v7 active/i);
+  assert.match(audit,/Pages workflow #62 succeeded/i);
+  assert.match(audit,/Authenticated UI and browser submission remain pending/i);
   assert.match(audit,/historical ingestion[^\n]*published/i);
 });
 
@@ -198,6 +269,11 @@ test('contracts-only release runs database gates but does not deploy the Edge Fu
     assert.equal(result.deployed,false);
     assert.ok(calls.some(call=>call.input?.includes('-- LEIA_RATE_LIMIT_PHASE: residue')));
     assert.ok(calls.some(call=>call.args[0]==='db'&&call.args[1]==='query'&&call.args.includes('--file')));
+    const sqlFixtures=calls.filter(call=>call.args[0]==='db'&&call.args[1]==='query'&&call.args.includes('--file')).map(call=>call.args.at(-1));
+    assert.deepEqual(sqlFixtures,[
+      'supabase/tests/20261031033521_webhook_rate_limit_match_guard.sql',
+      'supabase/tests/20261031120500_lead_ingestion_activity_history.sql'
+    ]);
     assert.equal(calls.some(call=>call.args[0]==='functions'&&call.args[1]==='deploy'),false);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
@@ -252,7 +328,7 @@ test('release fails closed on the wrong linked Supabase project before any CLI c
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 
-test('release verifies the migration state after push before running contracts and deployment',()=>{
+test('release verifies migration state before push, after push and after contracts before deployment',()=>{
   const root=fixtureRoot();
   const {calls,execute}=releaseExecute();
   try{
@@ -261,17 +337,18 @@ test('release verifies the migration state after push before running contracts a
     const pushIndex=calls.findIndex(call=>call.args[0]==='db'&&call.args[1]==='push');
     const contractIndex=calls.findIndex(call=>call.args[0]==='db'&&call.args[1]==='query'&&call.args.includes('--file'));
     const deployIndex=calls.findIndex(call=>call.args[0]==='functions'&&call.args[1]==='deploy');
-    assert.equal(migrationCalls.length,2);
+    assert.equal(migrationCalls.length,3);
     assert.equal(migrationCalls[0].args.join(' '),'migration list --linked --output-format json');
     assert.ok(migrationCalls[0].input===undefined);
     assert.ok(pushIndex>calls.indexOf(migrationCalls[0]));
     assert.ok(calls.indexOf(migrationCalls[1])>pushIndex);
     assert.ok(contractIndex>calls.indexOf(migrationCalls[1]));
-    assert.ok(deployIndex>contractIndex);
+    assert.ok(calls.indexOf(migrationCalls[2])>contractIndex);
+    assert.ok(deployIndex>calls.indexOf(migrationCalls[2]));
   }finally{rmSync(root,{recursive:true,force:true});}
 });
 
-test('release refuses to deploy when migration 33521 is still unapplied after push',()=>{
+test('release refuses to deploy when migration 31120500 is still unapplied after push',()=>{
   const root=fixtureRoot();
   const calls=[];
   let migrationReads=0;
@@ -280,10 +357,10 @@ test('release refuses to deploy when migration 33521 is still unapplied after pu
       calls.push(args);
       if(args[0]==='migration'){
         migrationReads++;
-        return JSON.stringify(migrationState({pending33521:true}));
+        return JSON.stringify(migrationState({pendingTarget:true}));
       }
       return '';
-    }}),/not aligned|33521|applied/i);
+    }}),/not aligned|20261031120500|applied/i);
     assert.equal(calls.filter(args=>args[0]==='functions'&&args[1]==='deploy').length,0);
   }finally{rmSync(root,{recursive:true,force:true});}
 });
@@ -298,7 +375,7 @@ test('release refuses divergent migration history before database push',()=>{
       return JSON.stringify({migrations:[
         ...BASELINE_MIGRATIONS.filter(version=>!swapped.has(version)).map(version=>({local:version,remote:version})),
         ...[...swapped].map(([local,remote])=>({local,remote})),
-        {local:'20261031033521',remote:''}
+        {local:'20261031120500',remote:''}
       ]});
     }}),/diverges/i);
     assert.equal(calls.filter(args=>args[0]==='db').length,0);
