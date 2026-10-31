@@ -4,7 +4,7 @@
 - **Implementação:** ambas as linhas são controles de botão acessíveis; abrem o drawer existente. Abertas apresenta `openDeals`, Ganhas apresenta `wonDeals`; filtros de período/equipe do Dashboard são preservados.
 - **Arquivos:** `src/pages/DashboardPage.tsx`, `src/styles.css`, `src/test/DashboardMobileLayout.test.tsx`.
 - **Evidências:** teste focal 3/3; typecheck e build passaram; audit reportou 0 vulnerabilidades. Suíte completa repetida serialmente: 43/43 arquivos e 193/193 testes aprovados; a execução paralela anterior teve 9 timeouts de concorrência em testes de outras páginas.
-- **Estado de entrega:** alteração local não commitada nem publicada; deploy e UI remota ainda não validados.
+- **Entrega:** commit funcional `410edcb10ccd32c6d4e05866addfbec1ee040e1f` em `origin/main`; workflow `41149784034` concluiu com sucesso no mesmo SHA. Página GitHub Pages e JS/CSS responderam HTTP 200; hashes remotos coincidem com `dist/` (`index-BIvZC6hq.js`: `1347bdbabc0161ad0303ab79a1ed2fc883717ba7400a9014ce6fc925a90b5cfe`; `index-C9h4_b7w.css`: `55886b160db13f9457bd393afc9582c5b09600ef47c31a3cddc6be9b8c7aaf91`). Bundle contém marcador `dashboard-funnel-row`.
 
 # Histórico de alterações auditadas
 
