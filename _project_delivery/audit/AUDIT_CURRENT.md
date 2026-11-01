@@ -5,7 +5,7 @@
 - Metas são apresentadas como orientação visual; a interface não dispara notificações automáticas e o RPC de notificações está sem permissão para authenticated.
 - Read-back de catálogo no staging confirmou os RPCs upsert/delete existentes, execução permitida para authenticated, negada para anon e sem execução autenticada do RPC de notificações.
 - Validação frontend: 46 arquivos / 215 testes, TypeScript e build aprovados. Build mantém avisos existentes de `config.js` e chunk principal >500 kB.
-- Nenhuma meta foi criada, editada ou apagada durante a validação. O frontend atualizado ainda não foi publicado no Pages. Produção `xpeqykpnwwhmgonymlap` e `crm.marketingcore.com.br` continuam intactos.
+- Nenhuma meta foi criada, editada ou apagada durante a validação. Frontend publicado no Pages pelo commit `41877e5563ff17b78c20fa07b3553ed5efaf2dfc`; workflow `41359998669` concluiu `success`, e `origin/main` confirma o mesmo SHA. URL pública exibe login; runtime config e bundle JS/CSS foram lidos de volta e apontam ao staging, com marcadores de edição, exclusão e orientação visual. Produção `xpeqykpnwwhmgonymlap` e `crm.marketingcore.com.br` continuam intactos.
 
 # READ-BACK APÓS DEPLOY STAGING — 01/11/2026
 

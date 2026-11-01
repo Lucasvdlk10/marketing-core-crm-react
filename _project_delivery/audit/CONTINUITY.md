@@ -3,10 +3,10 @@
 ## Próximo passo — feature de metas mensais — 01/11/2026
 
 - A migration `20261101100000_dashboard_goal_management.sql` já foi aplicada somente ao staging `nsrwjtgzluadienwtnxt`; local e remoto estão alinhados em 70 migrations. DB lint remoto passou e catálogo confirmou: authenticated pode executar upsert/delete, anon não pode excluir e authenticated não pode mais disparar notificações de metas.
-- Frontend local implementa criação apenas para o mês atual, edição apenas para metas do mês atual, exclusão de qualquer mês mediante confirmação e aviso de que metas são orientativas. Código validado: 46 arquivos/215 testes, typecheck e build passaram; frontend ainda não publicado.
+- Frontend publicado no preview pelo commit `41877e5563ff17b78c20fa07b3553ed5efaf2dfc`; workflow `41359998669` está `success`. Leitura pública confirmou o runtime config no staging e os marcadores de edição, exclusão e orientação no JS/CSS. A suíte tem 46 arquivos/215 testes, typecheck e build passaram; avisos conhecidos permanecem.
 - Não executar ações de gravação/exclusão em metas reais durante o smoke test; nenhuma meta foi alterada. Produção permanece intacta.
-- Há modificações não relacionadas já existentes em `LeadProfileDrawer`, `ContactsPage`, `PipelinePage`, `styles.css`, testes e `src/components/deals`; a tarefa de criação de negociação segue pausada. Para publicar esta melhoria, revisar/stagear somente os arquivos de metas e não incluir esses itens.
-- Próximo: publicar somente a melhoria de metas no preview Pages, verificar workflow e assets servidos; depois validar visualmente no staging sem gravar/excluir dados. Só então registrar o read-back final.
+- Há modificações não relacionadas já existentes em `LeadProfileDrawer`, `ContactsPage`, `PipelinePage`, `styles.css`, testes e `src/components/deals`; a tarefa de criação de negociação segue pausada. O release atual incluiu somente os arquivos da feature de metas e auditoria, mantendo as alterações da negociação sem commit.
+- Próximo: Lucas pode entrar no preview e verificar visualmente os botões, edição restrita ao mês atual e confirmação de exclusão, sem salvar/excluir metas reais. Recolher feedback; produção segue intocada até as demais correções e reconciliação do cutover.
 
 ## Read-back do deploy GitHub Pages — 01/11/2026
 
