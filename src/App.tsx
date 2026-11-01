@@ -6,6 +6,7 @@ import { NewPasswordScreen } from "./components/auth/NewPasswordScreen";
 import { AppShell } from "./components/layout/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ContactsPage } from "./pages/ContactsPage";
+import { ContactsServerPage } from "./pages/ContactsServerPage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { TasksPage } from "./pages/TasksPage";
 import { CalendarPage } from "./pages/CalendarPage";
@@ -26,7 +27,7 @@ import {
   updateRemoteWorkspaceName,
   getRemoteWorkspaceId,
   isRemoteMode,
-  remoteRpc,
+  remotePresenceRpc,
 } from "./lib/remoteCrm";
 
 import { startIdleSession } from "./lib/idleLogout";
@@ -137,9 +138,13 @@ export function App() {
   useEffect(() => {
     if (!session || !remoteReady || !isRemoteMode()) return;
     const workspace = getRemoteWorkspaceId();
-    void remoteRpc("core_presence_record", { p_workspace: workspace, p_status: "online" });
-    const heartbeat = window.setInterval(() => void remoteRpc("core_presence_heartbeat", { p_workspace: workspace }), 60_000);
-    const markOffline = () => void remoteRpc("core_presence_record", { p_workspace: workspace, p_status: "offline" });
+    const sendPresence = (name: "core_presence_record" | "core_presence_heartbeat", status?: "online" | "offline") => {
+      // beforeunload é best-effort; expiração server-side continua necessária.
+      void remotePresenceRpc(name, { p_workspace: workspace, ...(status ? { p_status: status } : {}) }).catch(() => undefined);
+    };
+    sendPresence("core_presence_record", "online");
+    const heartbeat = window.setInterval(() => sendPresence("core_presence_heartbeat"), 60_000);
+    const markOffline = () => sendPresence("core_presence_record", "offline");
     window.addEventListener("beforeunload", markOffline);
     return () => { window.clearInterval(heartbeat); window.removeEventListener("beforeunload", markOffline); markOffline(); };
   }, [session, remoteReady]);
@@ -277,6 +282,7 @@ export function App() {
             element={<DashboardPage preview={previewMode} />}
           />
           <Route path="/contacts" element={visibleModules.has('contacts')?<ContactsPage preview={previewMode}/>:<Navigate to="/dashboard" replace/>}/>
+          <Route path="/contacts-server-preview" element={visibleModules.has('contacts')?<ContactsServerPage/>:<Navigate to="/dashboard" replace/>}/>
           <Route
             path="/pipeline"
             element={visibleModules.has('pipeline')?<PipelinePage preview={previewMode} />:<Navigate to="/dashboard" replace/>}

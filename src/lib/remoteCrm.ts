@@ -172,7 +172,6 @@ export type RemoteSnapshot = {
 
 const workspaceKey = "marketing_core_active_workspace";
 const snapshotCacheKey = "marketing_core_remote_snapshot_v2";
-const snapshotCacheMaxAge = 12 * 60 * 60 * 1000;
 export const REMOTE_UPDATED_EVENT = "marketing-core-remote-updated";
 const encode = (value: string) => encodeURIComponent(value);
 const userId = (session: Session) => String(session.user?.id || "");
@@ -191,20 +190,17 @@ export function getRemoteWorkspaceId() {
 export function isRemoteMode() {
   return Boolean(crmApi?.getSession() && getRemoteWorkspaceId());
 }
-export function restoreRemoteSnapshot(session:Session):RemoteSnapshot|null{
-  try{
-    const envelope=JSON.parse(sessionStorage.getItem(snapshotCacheKey)||"null") as {userId?:string;savedAt?:number;snapshot?:RemoteSnapshot}|null;
-    if(!envelope?.snapshot||envelope.userId!==userId(session)||!envelope.savedAt||Date.now()-envelope.savedAt>snapshotCacheMaxAge){sessionStorage.removeItem(snapshotCacheKey);return null}
-    remoteSnapshot=envelope.snapshot;
-    sessionStorage.setItem(workspaceKey,envelope.snapshot.workspace.id);
-    return remoteSnapshot;
-  }catch{sessionStorage.removeItem(snapshotCacheKey);return null}
+// Não restaura dados pessoais do navegador: a fonte autoritativa é o Supabase.
+// Cache legado é eliminado também em sessões previamente abertas.
+export function restoreRemoteSnapshot(_session:Session):RemoteSnapshot|null{
+  sessionStorage.removeItem(snapshotCacheKey);
+  return null;
 }
 function store(snapshot: RemoteSnapshot) {
   remoteSnapshot = snapshot;
   sessionStorage.setItem(workspaceKey, snapshot.workspace.id);
-  const session=crmApi?.getSession();
-  if(session)try{sessionStorage.setItem(snapshotCacheKey,JSON.stringify({userId:userId(session),savedAt:Date.now(),snapshot}))}catch{sessionStorage.removeItem(snapshotCacheKey)}
+  // Snapshot inteiro (inclusive notas e custom_fields) deve permanecer só em RAM.
+  sessionStorage.removeItem(snapshotCacheKey);
   localStorage.removeItem("marketing_core_remote_snapshot");
   localStorage.removeItem(workspaceKey);
   window.dispatchEvent(new Event(REMOTE_UPDATED_EVENT));
@@ -485,6 +481,23 @@ export function markAllRemoteNotificationsRead(ids: string[]) {
     await refreshRemoteCrm();
   });
 }
+/** Leitura sem refresh global; permitida apenas para RPCs read-only auditadas. */
+export function remoteReadRpc<T = unknown>(
+  name: "core_dashboard_preferences_get" | "core_dashboard_goals_list",
+  args: Row,
+): Promise<T> {
+  if (!crmApi) return Promise.reject(Error("Supabase não configurado."));
+  return crmApi.rpc(name, args) as Promise<T>;
+}
+/** Presença é telemetria, não uma operação que invalida o snapshot inteiro. */
+export function remotePresenceRpc(
+  name: "core_presence_record" | "core_presence_heartbeat",
+  args: Row,
+): Promise<void> {
+  if (!crmApi) return Promise.reject(Error("Supabase não configurado."));
+  return (crmApi.rpc(name, args) as Promise<unknown>).then(() => undefined);
+}
+
 export function remoteRpc<T = unknown>(name: string, args: Row): Promise<T> {
   return enqueueMutation(async () => {
     if (!crmApi) throw Error("Supabase não configurado.");

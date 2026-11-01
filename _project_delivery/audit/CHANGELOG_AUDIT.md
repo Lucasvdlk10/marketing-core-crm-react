@@ -1,3 +1,28 @@
+## 01/11/2026 — Migrations aditivas no staging e release gate de produção
+
+- Migrations do pacote aplicadas apenas em `nsrwjtgzluadienwtnxt`: ACL de presença/equipe (versão local 20261101090000 para preceder as leituras), APIs de leitura, dashboard v2, índices concorrentes e dashboard por período. `supabase migration list` confirma 69/69 versões locais no staging; `supabase db lint --linked --schema public --level error --fail-on error` exit 0. Não houve mutação em produção.
+- P0 de heartbeat/cache aplicado no frontend; criada rota de prévia autenticada e read-only `#/contacts-server-preview`, sem substituir Contatos original. A API de importação em jobs ficou fora da UI (worker/contrato ainda incompletos).
+- Validação frontend após integração: 46 arquivos de teste/211 testes passaram; `typecheck`, build e `npm audit --audit-level=moderate` passaram, 0 vulnerabilidades. Build ainda avisa que `config.js` é runtime config não bundlado e que o chunk principal excede 500 kB.
+- Diferença crítica descoberta: produção tem só 11 versões remotas contra 69 locais (61 pendentes e 3 remotas exclusivas); staging está alinhado 69/69. `db push` de produção está bloqueado até reconstruir a linha-base/migrations, para não executar SQLs históricos errados.
+- Schema dos backups também diverge materialmente: produção tem 21 tabelas `crm_*` exclusivas; staging tem 30 tabelas adicionais do modelo `core_*`/`core_private`. Produção contém 14 leads antigos, 5 contatos `core_*` e 6 usuários Auth; staging tem 223 contatos/31 negócios e quatro workspaces. Sobreposição calculada por email/telefone: 5 leads antigos têm possível correspondência e 9 não, portanto reconciliação por tenant/registro ainda necessária; nenhum dado foi transferido.
+- Nenhum corte de domínio, substituição do frontend oficial, apagamento, migração de dados de clientes ou alteração de produção realizado. Exige plano idempotente de reconciliação e teste de rollback antes do cutover.
+
+## 01/11/2026 — Backup remoto dos dois CRMs e preflight de staging
+
+- `pg_dump` nativo conectado pelo pooler Supabase em modo custom; dumps completos de produção (`xpeqykpnwwhmgonymlap`, 665.793 bytes) e staging (`nsrwjtgzluadienwtnxt`, 2.370.371 bytes) criados em `Backups seguros`. `pg_restore --list` retornou exit 0 para ambos. SHA-256 do dump de produção mais recente: `69d78b5eaf679fa09558c97caf624e202d5829f037b6ad2b27ae1632b066f32c`; staging: `33da1aa922d6c59f436eb2c57fc1f7319cc7e25310d94f4719b9a1c2337f12e4`. Três cópias de produção permanecem; duas tentativas staging de zero bytes foram removidas.
+- Preflight read-only do pacote executado no staging e terminou com `STAGING_PREFLIGHT_OK`; tabelas/FKs esperadas, funções, RLS e inventário de índices foram consultados. Nenhuma migration nova foi aplicada; nenhum dado alterado.
+- ZIP entregue e os dois frontends têm cópias íntegras em `Backups seguros`; pacote continua parcial e exige integração/validação.
+- React CRM: execução serial com timeout de 15 s aprovou 45/45 arquivos e 209/209 testes; `npm run typecheck`, `npm run build` e `npm audit --audit-level=moderate` exit 0 (avisos de `config.js` e chunk grande).
+- Pendente: consultar ledger remoto e contratos exatos de retorno/segurança das RPCs antes das migrations; integrar sem misturar trabalho local pausado; implantar/validar staging e autenticação; planejar reconciliação/cutover dos clientes e Hostinger. Produção ainda não alterada.
+
+## 31/10/2026 — Auditoria de arquitetura de dados e desempenho
+
+- Criado `_project_delivery/audit/DATA_ARCHITECTURE_AUDIT.md` com revisão read-only de staging: catálogo de schema/RLS/ACLs/indexes/constraints, migrations, testes SQL, conexões do front-end, import/export e métricas agregadas.
+- Verificado ledger 64/64; identificado que 18 migrations locais são `;` e que DDL-base/RPC `core_dashboard_summary` não está integralmente versionado.
+- Medidos 9.743 calls ao `core_dashboard_summary` (média 320,24 ms; máximo 1.369,23 ms) no período agregado de ~12 dias. Código mostra que chamadas de presença e outras RPCs provocam refresh integral do snapshot.
+- ZIP compartilhável criado em `C:/Users/Lucas/Desktop/CRM_Auditoria_Dados_2026-10-31.zip`; CRC validado; SHA-256 será registrado na entrega ao usuário.
+- A implementação “Criar nova negociação” continua local, não commitada e não publicada.
+
 ## 30/10/2026 — Recepção de payload completo e multipartido do Leads Hub (deploy Supabase concluído; publicação UI pendente)
 
 - **Causa:** o RPC `core_ingest_lead` persistia hash e resumo genérico, não o JSON; faltava `submission_id`; payloads parciais eram rejeitados e chaves idempotentes reutilizadas entre partes conflituavam.
@@ -268,3 +293,14 @@
 - Lucas explicitly confirmed this is the staging/test CRM and authorized commit/push to this exact repository/Pages preview and changes only in Supabase staging `nsrwjtgzluadienwtnxt`. Production CRM ref `xpeqykpnwwhmgonymlap` and `crm.marketingcore.com.br` are expressly excluded. Packager remains partial and will not be called ready; fresh review and verification of the requested staging publication are next.
 - Precommit verification: focused deploy gate 21/21. Default parallel `npm test` had 24/202 timeouts across 16 files; targeted `TasksPage` passed 3/3 and the full serial suite passed 45/45 files/202 tests. Typecheck, build, npm audit (0 vulnerabilities), and diff-check passed. Parallel timeout cause remains unverified; known build warnings unchanged.
 - V20 passed independent review (`deleg_f1b08d14`) with no security/logic findings; patch SHA `e36e4f7d9c064a0a7da589b02b89a68a72fe31e6811003a233081bb963e9d376`, nine exact reconstructed paths, and 64/64 migration equality. Commit `381d4d8958514dba15518e3799afe39f6f14abc3` was pushed and read back on `origin/main`; Pages workflow #63 / run `41241080563` succeeded for that SHA. Public root, JS, CSS and runtime config returned 200; HTML/JS/CSS hashes matched local `dist` exactly and config hash matched after CRLF→LF normalization. Runtime config points to staging and contains no service-role credential. Login UI is visible, authenticated flow not tested; no real leads or production changes. Packager remains partial (score 71, 44 findings, safe_to_deliver=false).
+
+## 2026-10-31 — Workspace access: root cause and local fix
+
+- Staging account readback: exactly one confirmed, active Auth identity; not banned/deleted; one active `sdr` membership in the active workspace; no pending invitation. No credential was used. Role has 35 readable permission rows, 16 enabled; `team.manage=false`. Under simulated `authenticated` claims, `auth.uid()` and `core_has_access(workspace)` succeed.
+- Confirmed cause: live `core_team_groups(uuid)` raises SQLSTATE 42501 / `Permission denied` unless the caller is platform super-admin or `core_has_permission(workspace,'team.manage')`. `bootstrapRemoteCrm()` unconditionally called this RPC in its required `Promise.all`; the denied request rejected the entire bootstrap. Membership and workspace are valid; do not grant team.manage to fix login.
+- Local frontend correction: reuse the concurrent `core_role_permissions` read and call `core_team_groups` only for owner or a role with enabled `team.manage`; otherwise hydrate an empty groups list. No migration, database write, production access or permission escalation.
+- Regression was red before the change (7/8) and green after (9/9); serial suite 45/45 files, 209/209, typecheck/build passed, deploy-gate 21/21, diff-check passed (LF/CRLF warnings only). Build retains existing `config.js` and large-chunk warnings.
+- Independent review passed. Access fix commit `fed9acb7251296e472340fdb1bf66c031af245dd` and date-stability test commit `ec65d63f6131a23f26b6a85da6300259a29d355b` were pushed; `git ls-remote` matches local `HEAD`. Pages run `41258518685` succeeded for `ec65d63f6131a23f26b6a85da6300259a29d355b`.
+- First Pages attempt `41257916489` failed because dashboard tests used fixed October data with implicit current-month bounds; GitHub’s UTC date was 2026-11-01. Added explicit October bounds in `DashboardPage.test.tsx` and `DashboardMobileLayout.test.tsx`. Follow-up: 45/45 files, 209/209 tests; typecheck/build, deploy gate 21/21 and diff-check passed.
+- Post-deploy public readback: login shell loaded; JS asset returned 200 and includes `core_team_groups` gated by enabled `team.manage`; runtime config points at staging and has no service-role key. Independent reviewer found no issue in the access fix. No database writes, permission grants, leads, or production changes.
+- Remaining verification: Maykelly to rotate the password shared in chat, then sign in to the preview and confirm workspace loads. No authenticated session was tested or password used/stored.

@@ -9,7 +9,7 @@ vi.mock('react-grid-layout',()=>({
   ResponsiveGridLayout:({children,onDragStop,dragConfig}:any)=><><button type="button" data-testid="simulate-mobile-layout-change" onClick={()=>onDragStop?.([state.layout])}>simulate</button><div className="react-grid-layout" data-testid="responsive-grid" data-drag-enabled={dragConfig?.enabled}>{children}</div></>,
   useContainerWidth:()=>({width:state.width,containerRef:()=>undefined,mounted:true}),
 }));
-vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>true,getRemoteWorkspaceId:()=> 'workspace-mobile',remoteRpc:(name:string,args:unknown)=>state.rpc(name,args)}));
+vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>true,getRemoteWorkspaceId:()=> 'workspace-mobile',remoteRpc:(name:string,args:unknown)=>state.rpc(name,args),remoteReadRpc:(name:string,args:unknown)=>state.rpc(name,args)}));
 vi.mock('../lib/useRemoteSnapshot',()=>({useRemoteSnapshot:()=>snapshot}));
 
 beforeEach(()=>{state.width=390;state.rpc.mockReset().mockImplementation(async(name:string)=>name==='core_dashboard_preferences_get'?{layout:null,selected_team_id:null}:name==='core_dashboard_goals_list'?[]:{})});

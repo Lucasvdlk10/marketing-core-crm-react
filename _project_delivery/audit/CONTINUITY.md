@@ -1,5 +1,33 @@
 # Continuidade e Handoff
 
+## Atualização do rollout — 01/11/2026
+
+- Aplicadas no staging (`nsrwjtgzluadienwtnxt`) apenas migrations aditivas 20261101090000, 90100, 90200, 90300 e 90600. `migration list`: 69/69; `db lint` erro-level: exit 0. Produção (`xpeqykpnwwhmgonymlap`) intocada.
+- Frontend ganhou otimização P0 de heartbeat/cache e página read-only opcional `#/contacts-server-preview`; página original permanece default. Verificação final: 46 arquivos/211 testes, typecheck, build e audit exit 0; sem vulnerabilidades, com avisos de runtime config/chunk grande.
+- Não avançar produção com `db push`: ledger diverge (11 remotas, 69 locais; 61 locais pendentes e 3 exclusivas remotas) e schema difere (21 tabelas `crm_*` only em prod, 30 tabelas core only em staging).
+- Dados a reconciliar antes do cutover: produção tem 14 leads legacy, 5 contatos core, 6 usuários Auth; staging tem 223 contatos/31 negócios. 5 leads mostram match provável por email/telefone; 9 sem correspondência. Nenhum registro foi movido.
+- Backups atuais: produção 665.793 B / SHA-256 `69d78b5eaf679fa09558c97caf624e202d5829f037b6ad2b27ae1632b066f32c`; staging 2.370.371 B / SHA-256 `33da1aa922d6c59f436eb2c57fc1f7319cc7e25310d94f4719b9a1c2337f12e4`. Arquivos em `Backups seguros`, `pg_restore --list` OK.
+- Próximos passos: verificar resultado de testes; publicar frontend staging sem incluir alterações locais preexistentes de negócios; validar login/RLS na rota de prévia; gerar plano de baseline/migration para prod e reconciliar dados por workspace em ambiente controlado. Não apagar dados nem substituir domínio antes disso.
+
+## Estado atual — rollout staging/produção — 01/11/2026
+
+- Backups custom-format completos gerados e verificados com `pg_restore --list`: produção `xpeqykpnwwhmgonymlap`, 665.793 bytes, SHA-256 `69d78b5eaf679fa09558c97caf624e202d5829f037b6ad2b27ae1632b066f32c`; staging `nsrwjtgzluadienwtnxt`, 2.370.371 bytes, SHA-256 `33da1aa922d6c59f436eb2c57fc1f7319cc7e25310d94f4719b9a1c2337f12e4`. Ambos em `Backups seguros`; backups zero-byte removidos.
+- Preflight de contrato/RLS/índices do ZIP passou no staging. Não aplicar migrations até conferir ledger remoto, assinaturas/retornos das funções e compatibilidade.
+- Nenhuma migration nova, dado, função remota ou produção foi alterada ainda.
+- A suíte atual da árvore React (incluindo alterações locais já existentes) passou serialmente: 45 arquivos/209 testes; typecheck, build e audit exit 0, com warnings de config.js/chunk.
+- Preservar alterações locais preexistentes do recurso criar negociação. ZIP é parcial; authenticated browser e teste de restore ainda pendentes.
+- Próxima ação: ler saída da consulta read-only do ledger/assinaturas no staging; preparar integração aditiva e ledger corretamente; executar testes e preview autenticado; só depois cutover reversível e reconciliação de dados na produção.
+
+## Estado atual — auditoria de dados — 31/10/2026
+
+- Relatório focado em dados e performance: `audit/DATA_ARCHITECTURE_AUDIT.md`.
+- Escopo: Supabase de staging, leitura somente; produção não consultada; sem alterações de banco, leads reais, linhas de clientes ou credenciais exportadas.
+- Confirmações: 64 migrations locais/remotas no ledger; 18 arquivos locais são placeholders (`;`); 48 tabelas `public.core_*` com RLS 48/48; 8 tabelas em `core_private`, com dois objetos internos sem RLS mas sem grants para roles de cliente; 86 policies, 130 índices, 334 constraints.
+- Sinal de performance: `remoteRpc` sempre reidrata o snapshot completo e o heartbeat roda a cada 60 s; `core_dashboard_summary` aparece com 9.743 chamadas e média de 320,24 ms no intervalo estatístico observado. Priorizar reduzir refreshes e adicionar paginação no servidor.
+- A auditoria apontou que a cadeia local de migrations não recria o schema-base atual; recuperar uma fonte completa e validar em ambiente descartável sem editar migrations aplicadas.
+- ZIP compartilhável: `C:/Users/Lucas/Desktop/CRM_Auditoria_Dados_2026-10-31.zip` (CRC verificado; SHA-256 na entrega).
+- A tarefa `lead-profile-create-deal` está pausada. Preservar os arquivos não commitados em `LeadProfileDrawer`, `ContactsPage`, `PipelinePage`, estilos, testes e `DealCreateDialog`; não publicar durante esta auditoria.
+
 ## Ordem obrigatória de leitura
 
 1. `audit/AUDIT_CURRENT.md`
@@ -81,3 +109,13 @@ A UI de origem específica e as correções do ciclo #4 estão no baseline stage
 - Fresh staging readback: both SQL fixture commands exited 0 with PASS; the legacy fixture's 10 residue counters and multipart fixture's 7 residue counters are all zero. Migration readback is 64/64 with target `20261031120500`; Edge is ACTIVE v7, `verify_jwt=false`. No SQL edits, real leads, or Edge deployment.
 - V20 independent review passed with no security or logic findings; exact byte reconstruction was verified for all 9 paths. Commit `381d4d8958514dba15518e3799afe39f6f14abc3` is on `origin/main`; Pages run #63 (`41241080563`) succeeded for that SHA. Public root and JS/CSS/config all returned 200; asset hashes match local build, config hash matches after line-ending normalization and points to staging. Login UI shown, but authenticated flow not tested. No real leads; production untouched; Packager remains partial/not-ready.
 - Lucas's next action is to inspect the preview URL. Do not alter production ref/domain without separate approval.
+
+## Active access fix — staging workspace bootstrap (2026-10-31)
+
+- Read-only diagnosis: affected account is confirmed/not banned/not deleted, active `sdr` membership in the active workspace, and no pending invitation. Simulated authenticated claims pass `core_has_access`; `team.manage` is disabled for this role.
+- Root cause: `core_team_groups` deliberately requires owner or `team.manage`, but `bootstrapRemoteCrm()` called it for every role; its rejection aborted `Promise.all` and showed the workspace error.
+- Local fix: `remoteCrm.ts` now gates the groups RPC using the already loaded role-permission rows. No membership/permission grants or database changes. Regression tests: 9/9 focused; full serial suite 45/45 files, 209/209; typecheck, build and deploy gate passed. No authenticated browser retest yet.
+- Independent review passed. The access fix is on `origin/main` as `fed9acb7251296e472340fdb1bf66c031af245dd`; deterministic dashboard period tests are in `ec65d63f6131a23f26b6a85da6300259a29d355b`. GitHub Pages run `41258518685` succeeded for the exact second SHA.
+- Public readback confirms the login shell loads and the deployed JS bundle contains the permission gate before `core_team_groups`; runtime config points to staging. No Auth password was used and no real authenticated session was exercised.
+- One CI run failed because October fixture dates were compared with the runner’s November UTC month. Tests now set explicit October bounds; 45/45 files, 209/209 tests, typecheck/build and deploy gate 21/21 pass. No DB grants or writes; production untouched.
+- Next: have Maykelly rotate the password shared in chat, then log in again to the staging preview and report whether workspace loads. Preserve the unrelated paused deal-creation changes; do not publish them.

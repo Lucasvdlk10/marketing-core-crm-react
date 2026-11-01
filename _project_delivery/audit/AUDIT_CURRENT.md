@@ -1,3 +1,23 @@
+# ROLLOUT 01/11/2026 — ESTADO APÓS STAGING
+
+- Staging atualizado exclusivamente com cinco migrations additivas. Ledger: 69/69 local/remoto; lint remoto de `public` sem erros. Produção não alterada.
+- Frontend: P0 heartbeat/cache e rota read-only para teste de paginação em `#/contacts-server-preview`; a rota original não foi substituída. Login real e teste browser autenticado ainda não verificados.
+- 46 arquivos/211 testes passaram; typecheck, build e audit passaram (0 vulnerabilidades). Build com avisos de runtime `config.js` e bundle principal >500 kB.
+- Bloqueio de produção: ledger remoto 11 versões vs 69 locais (61 pendentes, 3 remotas exclusivas); schemas diferem em 21 tabelas legacy `crm_*` e 30 tabelas adicionais stage `core_*`. Não usar `db push` de produção nem substituir o frontend oficial até resolver o baseline e aprovar o mapa de dados.
+- Dados: backup production contém 14 `crm_leads`, 5 `core_contacts`, 6 auth.users; staging contém 223 `core_contacts`, 31 `core_deals` e quatro workspaces. 5 dos 14 leads mostram possível match por e-mail/telefone; 9 não. Ainda não transferidos.
+- Backups completos e `pg_restore --list` validado; hashes/caminhos no CHANGELOG. ZIP do pacote parcial; importações em lote, relatórios, automações e paridade de UI não implementados.
+
+# STATUS DE MIGRAÇÃO — 01/11/2026
+
+- Backup PostgreSQL custom-format completo criado e validado para `L.E.I.A CRM` (`xpeqykpnwwhmgonymlap`, 665.793 bytes; pg_restore list OK; SHA-256 `69d78b5eaf679fa09558c97caf624e202d5829f037b6ad2b27ae1632b066f32c`) e `L.E.I.A CRM Staging` (`nsrwjtgzluadienwtnxt`, 2.370.371 bytes; pg_restore list OK; SHA-256 `33da1aa922d6c59f436eb2c57fc1f7319cc7e25310d94f4719b9a1c2337f12e4`). Arquivos estão em `Backups seguros`.
+- Preflight SQL do ZIP passou em staging (`STAGING_PREFLIGHT_OK`); sem alterações remotas neste passo.
+- ZIP parcial e backups front-end verificados; suíte serial 209/209, typecheck/build/audit aprovados com avisos descritos no changelog.
+- Estado: staging ainda sem migrations do novo pacote; produção, dados dos clientes e CRM Hostinger não alterados. Próxima ação segura: confirmar ledger, funções e índices remotos; integrar apenas mudanças compatíveis no staging, validar e então preparar cutover reconciliado.
+
+# AUDITORIA DE DADOS — 31/10/2026
+
+Auditoria read-only do staging sobre multi-tenancy/RLS, migrations, chamadas do front-end e desempenho; detalhes em `_project_delivery/audit/DATA_ARCHITECTURE_AUDIT.md`. Produção e linhas de clientes não foram acessadas. ZIP compartilhável criado e verificado na Área de Trabalho.
+
 # CURRENT WEBHOOK RELEASE STATUS — 31/10/2026
 
 - Historical staging validated before this follow-up: migration `20261031033521` had been applied and its live contracts passed for React CRM ref `nsrwjtgzluadienwtnxt`; this is the existing 63-version baseline, not the new ingress target.
@@ -167,3 +187,14 @@ Arquivos rastreados modificados incluem páginas/componentes de Contacts, Tasks,
 - V20 passed independent review (`deleg_f1b08d14`): patch SHA `e36e4f7d9c064a0a7da589b02b89a68a72fe31e6811003a233081bb963e9d376`; all nine staged snapshots and byte-exact reconstruction verified; 64/64 migration ledger confirmed. Focused release gate 21/21 and diff-check passed.
 - Staging preview commit `381d4d8958514dba15518e3799afe39f6f14abc3` was pushed to `origin/main`; remote SHA readback equals local. GitHub Pages workflow #63 / run `41241080563` completed successfully for that exact SHA. Public root, JS, CSS and runtime config returned HTTP 200; root/JS/CSS SHA-256s match local `dist`, and runtime config matches after CRLF→LF normalization. Config points to staging ref `nsrwjtgzluadienwtnxt` and contains no service-role key. Login UI is visible; authenticated flow remains untested because no secure saved login is available. No real lead sent; production ref/domain untouched. Packager remains partial (71/44, `safe_to_deliver=false`), not ready.
 - Next: Lucas can inspect the preview at `https://lucasvdlk10.github.io/marketing-core-crm-react/`. Keep production unchanged pending separate approval; do not claim authenticated UI validation.
+
+## 2026-10-31 — Diagnóstico e correção local do acesso ao workspace
+
+- Leitura somente do staging: a conta afetada existe, está confirmada e não está banida/excluída; tem membership ativo `sdr` no workspace ativo, sem convite pendente. Sob claims simuladas de `authenticated`, `auth.uid()` e `core_has_access()` retornam verdadeiros. `team.manage` está desabilitado para `sdr` (35 permissões visíveis, 16 habilitadas). Nenhum segredo foi usado ou salvo.
+- Causa confirmada: `core_team_groups` exige owner ou capability `team.manage`; `bootstrapRemoteCrm()` chamava esse RPC incondicionalmente dentro de `Promise.all`, então o erro `Permission denied` derrubava todo o carregamento, apesar do membership válido.
+- Correção local em `src/lib/remoteCrm.ts`: consulta as permissões de forma concorrente e só chama `core_team_groups` para owner ou papel com `team.manage` habilitado; os demais recebem `teamGroups: []`. Não houve grant, migration nem escrita no Supabase.
+- Evidências: regressão reproduziu o erro antes da correção (7/8); depois 9/9 no adapter, suite serial 45/45 arquivos e 209/209 testes, typecheck/build e deploy-gate 21/21 aprovados; `git diff --check` passou com avisos conhecidos de LF/CRLF. Build mantém aviso conhecido de chunk >500 kB e `config.js` não-module.
+- Revisão independente aprovada. Fix em `src/lib/remoteCrm.ts` commitado como `fed9acb7251296e472340fdb1bf66c031af245dd`; testes determinísticos de data commitados como `ec65d63f6131a23f26b6a85da6300259a29d355b`. `origin/main` foi lido de volta com esse SHA. Pages run `41258518685` concluiu com sucesso para o SHA exato.
+- Verificação pública pós-deploy: página de login e JS carregados; bundle HTTP 200 contém `core_team_groups`, `team.manage` e a verificação de permissão antes do RPC. `config.js` aponta para o Supabase de staging e não contém service-role.
+- O primeiro Pages run (`41257916489`) falhou por testes de dashboard que pressupunham outubro como mês atual; o runner UTC já estava em 01/11. Os testes agora fixam explicitamente o intervalo de outubro. Suite serial 45/45 arquivos, 209/209; typecheck, build, deploy-gate 21/21 e diff-check aprovados.
+- O fluxo autenticado real ainda precisa ser confirmado por Maykelly; a senha enviada no chat não foi usada nem armazenada. Recomendar troca da senha e novo login/atualização da página. Nenhuma alteração/grant no banco, nenhum dado escrito e produção intocada.

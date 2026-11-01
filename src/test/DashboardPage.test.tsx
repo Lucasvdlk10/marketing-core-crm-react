@@ -20,7 +20,7 @@ const snapshot={
  members:[{user_id:'user-1',full_name:'Maykelly'},{user_id:'user-2',full_name:'Lucas'}],
  tasks:[],tags:[],contactTags:[],notifications:[],campaigns:[],segmentLists:[],segmentMembers:[],automations:[],importHistory:[],
 };
-vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>true,getRemoteWorkspaceId:()=> 'workspace-1',getRemoteSnapshot:()=>snapshot,remoteRpc:(name:string,args:unknown)=>rpc(name,args)}));
+vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>true,getRemoteWorkspaceId:()=> 'workspace-1',getRemoteSnapshot:()=>snapshot,remoteRpc:(name:string,args:unknown)=>rpc(name,args),remoteReadRpc:(name:string,args:unknown)=>rpc(name,args)}));
 vi.mock('../lib/useRemoteSnapshot',()=>({useRemoteSnapshot:()=>snapshot}));
 
 beforeEach(()=>{rpc.mockReset();rpc.mockImplementation(async(name:string)=>name==='core_dashboard_preferences_get'?{layout:null,selected_team_id:null}:name==='core_dashboard_goals_list'?[{id:'goal-1',name:'Meta mensal',metric:'revenue',target_value:10000,team_id:'team-1',starts_on:'2026-10-01',ends_on:'2026-10-31'}]:name==='core_dashboard_goal_upsert'?{id:'goal-new'}:{});});

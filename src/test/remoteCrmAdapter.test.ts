@@ -158,12 +158,11 @@ describe("authenticated remote adapter", () => {
     ]);
   });
 
-  it("restores the session-scoped snapshot only for the same authenticated user",async()=>{
+  it("does not persist the full remote snapshot in browser storage",async()=>{
     await bootstrapRemoteCrm(session);
-    expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toContain('workspace-1');
-    expect(restoreRemoteSnapshot(session)?.workspace.id).toBe('workspace-1');
-    expect(restoreRemoteSnapshot({...session,user:{id:'other-user'}})).toBeNull();
     expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toBeNull();
+    expect(restoreRemoteSnapshot(session)).toBeNull();
+    expect(restoreRemoteSnapshot({...session,user:{id:'other-user'}})).toBeNull();
   });
 
   it("updates the workspace name and confirms it with a separate read-back", async () => {
