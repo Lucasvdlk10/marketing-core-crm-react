@@ -233,6 +233,7 @@ export async function bootstrapRemoteCrm(
   preferredWorkspace?: string,
 ): Promise<RemoteSnapshot> {
   if (!crmApi) throw Error("Supabase não configurado.");
+  const api = crmApi;
   try {
     await crmApi.rpc("core_accept_my_pending_invitations", {});
   } catch {}
@@ -256,6 +257,22 @@ export async function bootstrapRemoteCrm(
     throw Error("Workspace do usuário não encontrado ou suspenso.");
   const w = workspace.id;
   const canReadAutomations = new Set(["owner", "admin", "marketing_manager", "viewer"]).has(String(membership.role).toLowerCase());
+  const rolePermissionsPromise = select<RemoteRolePermission>(
+    "core_role_permissions",
+    `select=role,permission,enabled&workspace_id=eq.${encode(w)}&role=eq.${encode(membership.role)}`,
+  );
+  const canManageTeamGroupsPromise = rolePermissionsPromise.then((permissions) => {
+    const role = String(membership.role).toLowerCase();
+    return role === "owner" || permissions.some(
+      (item) => String(item.role).toLowerCase() === role &&
+        item.permission === "team.manage" && item.enabled,
+    );
+  });
+  const teamGroupsPromise = canManageTeamGroupsPromise.then((canManage) =>
+    canManage
+      ? api.rpc("core_team_groups", { w }) as Promise<Array<{id:string;name:string;member_ids:string[]}>>
+      : Promise.resolve([] as Array<{id:string;name:string;member_ids:string[]}>),
+  );
   const [
     contacts,
     pipelines,
@@ -310,7 +327,7 @@ export async function bootstrapRemoteCrm(
     crmApi.rpc("core_member_display_names", { w }) as Promise<
       Array<{ user_id: string; full_name: string }>
     >,
-    crmApi.rpc("core_team_groups", { w }) as Promise<Array<{id:string;name:string;member_ids:string[]}>>,
+    teamGroupsPromise,
     select<RemoteCampaign>(
       "core_campaigns",
       `select=id,workspace_id,name,channel,budget,spent,status,start_date,end_date,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc`,
@@ -326,7 +343,7 @@ export async function bootstrapRemoteCrm(
     canReadAutomations
       ? crmApi.rpc("core_automation_list", { p_workspace: w }) as Promise<RemoteAutomation[]>
       : Promise.resolve([] as RemoteAutomation[]),
-    select<RemoteRolePermission>("core_role_permissions",`select=role,permission,enabled&workspace_id=eq.${encode(w)}&role=eq.${encode(membership.role)}`),
+    rolePermissionsPromise,
     select<RemoteImportHistory>("core_lead_import_history",`select=id,workspace_id,requested_by,file_name,source_type,total_rows,imported_rows,failed_rows,status,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc,id.desc&limit=50`),
     crmApi.rpc("core_dashboard_summary", { p_workspace: w }) as Promise<Record<
       string,

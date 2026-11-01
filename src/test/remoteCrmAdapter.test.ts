@@ -101,6 +101,63 @@ describe("authenticated remote adapter", () => {
     expect(api.rpc).not.toHaveBeenCalledWith('core_automation_list',expect.anything());
   });
 
+  it("does not block CRM bootstrap when an SDR cannot manage team groups", async () => {
+    api.request.mockImplementation((path: string) => {
+      if (path.includes("core_memberships"))
+        return [{ ...membership, role: "sdr" }];
+      if (path.includes("core_workspaces")) return [workspace];
+      if (path.includes("core_role_permissions"))
+        return [
+          { role: "sdr", permission: "contacts.read", enabled: true },
+          { role: "sdr", permission: "team.manage", enabled: false },
+        ];
+      return [];
+    });
+    api.rpc.mockImplementation((name: string) => {
+      if (name === "core_team_groups")
+        return Promise.reject(new Error("Permission denied"));
+      if (name === "core_dashboard_summary") return {};
+      return [];
+    });
+
+    const snapshot = await bootstrapRemoteCrm(session);
+
+    expect(snapshot.membership.role).toBe("sdr");
+    expect(snapshot.teamGroups).toEqual([]);
+    expect(api.rpc).not.toHaveBeenCalledWith(
+      "core_team_groups",
+      { w: "workspace-1" },
+    );
+  });
+
+  it("loads team groups when the member role has team.manage", async () => {
+    api.request.mockImplementation((path: string) => {
+      if (path.includes("core_memberships"))
+        return [{ ...membership, role: "sdr" }];
+      if (path.includes("core_workspaces")) return [workspace];
+      if (path.includes("core_role_permissions"))
+        return [
+          { role: "sdr", permission: "team.manage", enabled: true },
+        ];
+      return [];
+    });
+    api.rpc.mockImplementation((name: string) => {
+      if (name === "core_team_groups")
+        return [{ id: "team-1", name: "Sales", member_ids: ["user-1"] }];
+      if (name === "core_dashboard_summary") return {};
+      return [];
+    });
+
+    const snapshot = await bootstrapRemoteCrm(session);
+
+    expect(api.rpc).toHaveBeenCalledWith("core_team_groups", {
+      w: "workspace-1",
+    });
+    expect(snapshot.teamGroups).toEqual([
+      { id: "team-1", name: "Sales", member_ids: ["user-1"] },
+    ]);
+  });
+
   it("restores the session-scoped snapshot only for the same authenticated user",async()=>{
     await bootstrapRemoteCrm(session);
     expect(sessionStorage.getItem('marketing_core_remote_snapshot_v2')).toContain('workspace-1');
