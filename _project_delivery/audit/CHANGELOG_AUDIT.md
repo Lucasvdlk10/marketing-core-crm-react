@@ -1,3 +1,11 @@
+## 01/11/2026 — Gestão de metas mensais (staging)
+
+- Base de dados staging considerada aprovada por Lucas após testes próprios e da Maykelly. Produção não faz parte desta alteração.
+- Migration `20261101100000_dashboard_goal_management.sql` aplicada exclusivamente ao projeto `nsrwjtgzluadienwtnxt`: upsert só aceita período do mês atual no fuso `America/Sao_Paulo`; atualização também verifica que o registro existente é do mês atual; exclusão autenticada/permissionada grava auditoria. Execução autenticada do RPC de notificações de metas foi revogada, pois metas passam a ser apenas orientação visual.
+- Frontend local: ações de editar (somente mês atual) e excluir (qualquer mês, com confirmação); criação limitada ao mês atual, período fixo; texto da tela esclarece que metas não são obrigações nem critérios de avaliação.
+- Validação: suíte 46/46 arquivos e 215/215 testes; `npm run typecheck`, `npm run build`, migration list e DB lint sem erros. Avisos existentes de `config.js` runtime e bundle >500 kB permanecem.
+- Nenhum registro de meta alterado nos testes. Frontend ainda aguardando publicação no Pages; worktree possui mudanças pré-existentes não relacionadas de criação de negociação, que não podem entrar neste release.
+
 ## 01/11/2026 — Preview staging publicado e read-back
 
 - Commit `f292e2caacbfbe87508eb101d1671e2c52acbccd` publicado em `origin/main`; `git ls-remote` confirmou o mesmo SHA.

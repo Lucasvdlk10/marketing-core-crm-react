@@ -1,3 +1,12 @@
+# METAS MENSAIS — 01/11/2026
+
+- Staging Supabase `nsrwjtgzluadienwtnxt` recebeu a migration `20261101100000_dashboard_goal_management.sql`. `supabase migration list` confirmou 70/70 local/remoto; `supabase db lint --linked --schema public --level error --fail-on error` terminou sem erros.
+- Frontend local: criar metas para o mês corrente; editar somente metas do mês corrente; excluir qualquer meta após confirmação. O servidor valida o mês no RPC, e a exclusão fica limitada ao workspace/permissão, com auditoria.
+- Metas são apresentadas como orientação visual; a interface não dispara notificações automáticas e o RPC de notificações está sem permissão para authenticated.
+- Read-back de catálogo no staging confirmou os RPCs upsert/delete existentes, execução permitida para authenticated, negada para anon e sem execução autenticada do RPC de notificações.
+- Validação frontend: 46 arquivos / 215 testes, TypeScript e build aprovados. Build mantém avisos existentes de `config.js` e chunk principal >500 kB.
+- Nenhuma meta foi criada, editada ou apagada durante a validação. O frontend atualizado ainda não foi publicado no Pages. Produção `xpeqykpnwwhmgonymlap` e `crm.marketingcore.com.br` continuam intactos.
+
 # READ-BACK APÓS DEPLOY STAGING — 01/11/2026
 
 - Frontend staging: o commit de código `f292e2caacbfbe87508eb101d1671e2c52acbccd` foi publicado; o HEAD atual `b55470ac990d30f6b369fd02ad35b00f95525939` contém apenas o registro de auditoria e produz o mesmo bundle. Actions `41348737372` e `41349400274` concluíram com sucesso. URL pública serve login e bundle inclui a rota read-only `#/contacts-server-preview`. Runtime config verificado no navegador aponta somente ao Supabase staging.

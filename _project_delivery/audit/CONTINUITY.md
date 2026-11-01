@@ -1,5 +1,13 @@
 # Continuidade e Handoff
 
+## Próximo passo — feature de metas mensais — 01/11/2026
+
+- A migration `20261101100000_dashboard_goal_management.sql` já foi aplicada somente ao staging `nsrwjtgzluadienwtnxt`; local e remoto estão alinhados em 70 migrations. DB lint remoto passou e catálogo confirmou: authenticated pode executar upsert/delete, anon não pode excluir e authenticated não pode mais disparar notificações de metas.
+- Frontend local implementa criação apenas para o mês atual, edição apenas para metas do mês atual, exclusão de qualquer mês mediante confirmação e aviso de que metas são orientativas. Código validado: 46 arquivos/215 testes, typecheck e build passaram; frontend ainda não publicado.
+- Não executar ações de gravação/exclusão em metas reais durante o smoke test; nenhuma meta foi alterada. Produção permanece intacta.
+- Há modificações não relacionadas já existentes em `LeadProfileDrawer`, `ContactsPage`, `PipelinePage`, `styles.css`, testes e `src/components/deals`; a tarefa de criação de negociação segue pausada. Para publicar esta melhoria, revisar/stagear somente os arquivos de metas e não incluir esses itens.
+- Próximo: publicar somente a melhoria de metas no preview Pages, verificar workflow e assets servidos; depois validar visualmente no staging sem gravar/excluir dados. Só então registrar o read-back final.
+
 ## Read-back do deploy GitHub Pages — 01/11/2026
 
 - Commit `f292e2caacbfbe87508eb101d1671e2c52acbccd` confirmado em `origin/main`; run Pages `41348737372` success. Bundle novo contém rota `ContactsServerPage`.
