@@ -28,6 +28,8 @@ describe('dashboard mobile layout',()=>{
 
   it('opens the period funnel rows with only matching open and won deals',async()=>{
     render(<DashboardPage/>);
+    fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+    fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
 
     fireEvent.click(await screen.findByRole('button',{name:'Ver 1 negociações abertas'}));
     expect(screen.getByRole('dialog',{name:'Detalhes de Negociações abertas'})).toBeInTheDocument();

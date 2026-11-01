@@ -37,6 +37,8 @@ describe('DashboardPage',()=>{
 
  it('opens a detailed side panel when an indicator is clicked',async()=>{
   const user=userEvent.setup();render(<DashboardPage/>);
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   await user.click(screen.getByRole('button',{name:/Detalhes de Leads ativos/i}));
   const drawer=screen.getByRole('dialog',{name:'Detalhes de Leads ativos'});
   expect(within(drawer).getByText('Lead Outubro')).toBeInTheDocument();
@@ -46,6 +48,8 @@ describe('DashboardPage',()=>{
 
  it('segments the dashboard by custom team and shows velocity and goal progress',async()=>{
   const user=userEvent.setup();render(<DashboardPage/>);
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   await user.selectOptions(screen.getByLabelText('Perfil de equipe'),'team-1');
   expect(screen.getByTestId('metric-revenue')).toHaveTextContent('R$ 5.000');
   expect(screen.getByRole('option',{name:'Equipe Closers'})).toBeInTheDocument();
