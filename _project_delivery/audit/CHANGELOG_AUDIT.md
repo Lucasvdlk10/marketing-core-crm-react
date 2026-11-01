@@ -1,3 +1,11 @@
+## 01/11/2026 — Preview staging publicado e read-back
+
+- Commit `f292e2caacbfbe87508eb101d1671e2c52acbccd` publicado em `origin/main`; `git ls-remote` confirmou o mesmo SHA.
+- GitHub Actions `Deploy CRM React to GitHub Pages`, run `41348737372`, concluiu build, suíte e deploy com sucesso. Avisos não bloqueantes: actions antigas de Node 20 e futura imagem `ubuntu-latest`.
+- Read-back no navegador: GitHub Pages mostra login, bundle contém `ContactsServerPage`, runtime config aponta para staging `nsrwjtgzluadienwtnxt` e não para produção. Login real e chamada autenticada ainda aguardam Lucas.
+- Endpoint de teste depois do login: `https://lucasvdlk10.github.io/marketing-core-crm-react/#/contacts-server-preview` (read-only; Contatos original permanece padrão).
+- Site oficial `https://crm.marketingcore.com.br/` continua no frontend estático atual e configura projeto de produção `xpeqykpnwwhmgonymlap`; nenhum deploy/cutover nele.
+
 ## 01/11/2026 — Migrations aditivas no staging e release gate de produção
 
 - Migrations do pacote aplicadas apenas em `nsrwjtgzluadienwtnxt`: ACL de presença/equipe (versão local 20261101090000 para preceder as leituras), APIs de leitura, dashboard v2, índices concorrentes e dashboard por período. `supabase migration list` confirma 69/69 versões locais no staging; `supabase db lint --linked --schema public --level error --fail-on error` exit 0. Não houve mutação em produção.

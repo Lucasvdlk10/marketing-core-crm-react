@@ -1,5 +1,11 @@
 # Continuidade e Handoff
 
+## Read-back do deploy GitHub Pages — 01/11/2026
+
+- Commit `f292e2caacbfbe87508eb101d1671e2c52acbccd` confirmado em `origin/main`; run Pages `41348737372` success. Bundle novo contém rota `ContactsServerPage`.
+- Navegador anônimo: login visível; `config.js` aponta staging `nsrwjtgzluadienwtnxt`, não produção. Rota read-only para login de Lucas: `https://lucasvdlk10.github.io/marketing-core-crm-react/#/contacts-server-preview`. Não declarar RLS/auth validado antes de Lucas autenticar e confirmar a página.
+- O site `crm.marketingcore.com.br` e banco `xpeqykpnwwhmgonymlap` permanecem sem alteração. Não substituir frontend oficial nem sincronizar schema/dados até resolver as 61 migrations pendentes + 3 versões remotas exclusivas e reconciliar 14 leads legados/5 possíveis matches. A estrutura do staging é uma evolução de 30 tabelas, mas não é uma cópia dos dados de produção.
+
 ## Atualização do rollout — 01/11/2026
 
 - Aplicadas no staging (`nsrwjtgzluadienwtnxt`) apenas migrations aditivas 20261101090000, 90100, 90200, 90300 e 90600. `migration list`: 69/69; `db lint` erro-level: exit 0. Produção (`xpeqykpnwwhmgonymlap`) intocada.

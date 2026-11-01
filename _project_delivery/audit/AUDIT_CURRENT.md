@@ -1,3 +1,9 @@
+# READ-BACK APÓS DEPLOY STAGING — 01/11/2026
+
+- Frontend staging: `origin/main` = commit `f292e2caacbfbe87508eb101d1671e2c52acbccd`; GitHub Actions run `41348737372` concluído com sucesso. URL pública serve login e bundle inclui a rota read-only `#/contacts-server-preview`. Runtime config verificado no navegador aponta somente ao Supabase staging.
+- Falta login real/validação autenticada de RLS. Lucas pode iniciar em `https://lucasvdlk10.github.io/marketing-core-crm-react/#/contacts-server-preview` após entrar.
+- Produção continua no frontend antigo e banco sem alteração. Release gate bloqueado: história de migrations/schema de produção diverge; dados de staging não devem ser copiados cegamente.
+
 # ROLLOUT 01/11/2026 — ESTADO APÓS STAGING
 
 - Staging atualizado exclusivamente com cinco migrations additivas. Ledger: 69/69 local/remoto; lint remoto de `public` sem erros. Produção não alterada.
