@@ -10,11 +10,13 @@ import {
 import { PageHeader } from "../components/common/PageHeader";
 import { DataTable } from "../components/common/DataTable";
 import { LeadProfileDrawer } from "../components/contacts/LeadProfileDrawer";
+import { DealCreateDialog } from "../components/deals/DealCreateDialog";
 import { LeadImportPage } from "../components/contacts/LeadImportPage";
 import {PhoneInput,phoneIdentity} from "../components/common/PhoneInput";
 import {getLeadSources} from "../lib/leadSources";
 import { type MockLead } from "../data/mockCrmData";
 import {currentCapability} from '../lib/effectivePermissions';
+import { getPipelines } from "../lib/pipelines";
 import {
   createLeadRecord,
   getEffectiveLeads,
@@ -71,6 +73,8 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
   const [open, setOpen] = useState(false);
   const [leadError, setLeadError] = useState("");
   const [selectedLead, setSelectedLead] = useState<MockLead | null>(null);
+  const [dealCreateLead, setDealCreateLead] = useState<MockLead | null>(null);
+  const [dealCreateOpen, setDealCreateOpen] = useState(false);
   const notificationLeadHandled = useRef(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -81,6 +85,15 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const allLeads = baseLeads;
+  const openDealFromLead = (lead: MockLead) => {
+    if (!currentCapability("deals.write", preview)) return;
+    setDealCreateLead(lead);
+    setDealCreateOpen(true);
+  };
+  const closeDealDialog = () => {
+    setDealCreateOpen(false);
+    setDealCreateLead(null);
+  };
   const filtered = useMemo(
     () =>
       allLeads.filter((item) => {
@@ -689,6 +702,16 @@ export function ContactsPage({ preview = false }: { preview?: boolean }) {
         <LeadProfileDrawer
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
+          preview={preview}
+          onCreateDeal={openDealFromLead}
+        />
+      )}
+      {dealCreateOpen && dealCreateLead && (
+        <DealCreateDialog
+          pipeline={getPipelines()[0]!}
+          preview={preview}
+          initialLead={dealCreateLead}
+          onClose={closeDealDialog}
         />
       )}
     </>

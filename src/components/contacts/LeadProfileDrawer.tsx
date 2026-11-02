@@ -20,12 +20,17 @@ const activityValue=(value:unknown)=>typeof value==="string"?value:JSON.stringif
 export function LeadProfileDrawer({
   lead,
   onClose,
+  preview = false,
+  onCreateDeal,
 }: {
   lead: MockLead;
   onClose: () => void;
+  preview?: boolean;
+  onCreateDeal?: (lead: MockLead) => void;
 }) {
   const canWrite = currentCapability("contacts.write");
   const canDelete = currentCapability("contacts.delete");
+  const canCreateDeal = currentCapability("deals.write", preview);
   const [record, setRecord] = useState<LeadRecord>(() => getLeadRecord(lead));
   const [activities,setActivities]=useState<RemoteContactActivity[]>([]);
   const [activityLoading,setActivityLoading]=useState(false);
@@ -87,7 +92,7 @@ export function LeadProfileDrawer({
   };
   const saveNote = async (event: FormEvent) => {
     event.preventDefault();
-    if (!note.trim()) return;
+    if (!canWrite || !note.trim()) return;
     if (
       await persist({
         ...record,
@@ -184,10 +189,20 @@ export function LeadProfileDrawer({
                 Editar
               </button>
             )}
-            <button onClick={() => setAction("note")}>
+            {canWrite && <button onClick={() => setAction("note")}>
               <Plus size={14} />
               Registrar nota
-            </button>
+            </button>}
+            {canCreateDeal && onCreateDeal && (
+              <button
+                type="button"
+                aria-label="Criar nova negociação"
+                onClick={() => onCreateDeal(current)}
+              >
+                <Plus size={14} />
+                Criar nova negociação
+              </button>
+            )}
             {canDelete && (
               <button className="danger" onClick={() => setAction("delete")}>
                 <Trash2 size={14} />

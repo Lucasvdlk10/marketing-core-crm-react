@@ -1,5 +1,14 @@
 # Continuidade e Handoff
 
+## 02/11/2026 — feature negociação no perfil em validação final
+
+- Lucas pediu que a funcionalidade seja implementada e publicada rapidamente no preview de staging. Escopo autorizado: somente botão “Criar nova negociação” no perfil de lead, diálogo vinculado/pré-preenchido e testes; produção não autorizada.
+- Worktree isolado: `C:/Users/Lucas/AppData/Local/hermes/cache/scratch/crm-lead-profile-review`, base `9e84678`; cópia canônica tem outras mudanças sujas que não devem entrar no release.
+- Reviews anteriores acharam (1) ausência do gate `contacts.write` em `Registrar nota`/`saveNote`, (2) update de telefone/empresa antes do insert da negociação e (3) contato órfão se novo contato fosse criado e o deal falhasse. Corrigidos: gate UI + handler; contato existente nunca é atualizado nesse fluxo; criação de contato+negociação no remoto usa RPC transacional `core_deal_create_with_contact` na migration `20261102130000_atomic_contact_deal_create.sql`, exigindo ambas as permissões e validando workspace/pipeline/etapa.
+- Testes novos cobrem RPC atômica bem-sucedida, falha sem inserts diretos, contato existente sem update colateral e role sem permissões. Estado atual validado: suíte serial **46 arquivos / 219 testes**, typecheck, build, audit 0 vulnerabilidades e diff-check aprovados. Warnings conhecidos de `config.js` e chunk >500 KB.
+- A revisão independente final passou sem blocker. Read-only introspection confirmou schema/constraints relevantes; `supabase db push --dry-run` listou só a migration nova. Migration `20261102130000_atomic_contact_deal_create.sql` aplicada no staging `nsrwjtgzluadienwtnxt`; read-back ledger local/remoto **71/71**, RPC `SECURITY DEFINER`, search_path vazio, EXECUTE autenticado sim/anon e PUBLIC não. Nenhum contato ou negociação de teste foi criado.
+- Próximo passo autorizado: commit/push apenas os arquivos da feature, migration e auditoria; aguardar Pages workflow e validar asset/CTA público no preview. Manter alterações de `PipelinePage` e worker fora do commit.
+
 ## Próximo passo — feature de metas mensais — 01/11/2026
 
 - A migration `20261101100000_dashboard_goal_management.sql` já foi aplicada somente ao staging `nsrwjtgzluadienwtnxt`; local e remoto estão alinhados em 70 migrations. DB lint remoto passou e catálogo confirmou: authenticated pode executar upsert/delete, anon não pode excluir e authenticated não pode mais disparar notificações de metas.

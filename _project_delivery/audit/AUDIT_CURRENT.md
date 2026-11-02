@@ -1,3 +1,11 @@
+# FUNCIONALIDADE — criar negociação pelo perfil do lead — 02/11/2026
+
+- Implementação isolada em `C:/Users/Lucas/AppData/Local/hermes/cache/scratch/crm-lead-profile-review`, base `9e84678`; publicada? ainda não. Somente preview GitHub Pages de staging está autorizado, sem produção.
+- Correções após reviews: ação “Registrar nota” condicionada a `contacts.write` e handler `saveNote` bloqueia mutação sem permissão; negociação ligada a contato existente não atualiza telefone/empresa durante criação. Fluxo remoto sem contato existente agora usa RPC transacional `core_deal_create_with_contact` da migration `20261102130000_atomic_contact_deal_create.sql`, com checagem dos dois grants; falha do segundo insert reverte a criação do contato na mesma transação PostgreSQL.
+- Regressões: falha da criação atômica não dispara insert direto; criação com novo contato usa uma RPC; falha ao inserir negociação para contato já existente não chama `remoteUpdate`; contato ligado com telefone faltante usa o valor do diálogo sem gravação colateral; papel sem permissões não vê as ações. Suíte serial **46 arquivos / 219 testes**, typecheck, build, audit (0 vulnerabilidades) e diff-check passaram.
+- Migration aplicada no Supabase staging `nsrwjtgzluadienwtnxt`. Leitura de volta confirmou ledger local/remoto **71/71**, assinatura do RPC, `SECURITY DEFINER`, `search_path=""`, EXECUTE `authenticated=true`, `anon=false`, `PUBLIC=false`; definição remota corresponde ao arquivo local. Nenhum lead/negócio sintético foi criado. Revisão independente passou; suíte 46/219, typecheck/build/audit/diff-check aprovados.
+- Packager scoped: `partial`, score 71, `safe_to_deliver=false`, zero bloqueios, findings heurísticos preexistentes em bundle. O pacote ZIP não será declarado pronto. O preview Pages continua pendente; próximo passo é commit/push dos arquivos da feature e auditoria, aguardar workflow e verificar o bundle/CTA. Produção e domínio oficial permanecem intactos.
+
 # METAS MENSAIS — 01/11/2026
 
 - Staging Supabase `nsrwjtgzluadienwtnxt` recebeu a migration `20261101100000_dashboard_goal_management.sql`. `supabase migration list` confirmou 70/70 local/remoto; `supabase db lint --linked --schema public --level error --fail-on error` terminou sem erros.

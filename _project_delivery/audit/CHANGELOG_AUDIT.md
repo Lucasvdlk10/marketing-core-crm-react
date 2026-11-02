@@ -1,3 +1,12 @@
+## 02/11/2026 — correções de permissão e escrita parcial na negociação do perfil
+
+- Feature isolada em `crm-lead-profile-review`; nenhum commit/push/deploy, produção intacta.
+- Corrigido gate: `Registrar nota` só aparece com `contacts.write`; `saveNote` também retorna sem mutação quando a permissão falta. `DealCreateDialog` mantém gate `deals.write`.
+- Para contato existente, criação não atualiza telefone/empresa. Para contato novo remoto, migration `20261102130000_atomic_contact_deal_create.sql` e RPC `core_deal_create_with_contact` executam os dois inserts numa única transação; exigem `contacts.write` e `deals.write`, workspace/pipeline/etapa válidos, e deixam a criação totalmente revertida se qualquer insert falhar.
+- Validação final local após essa mudança: suíte serial **46/46 arquivos, 219/219 testes**, typecheck, build, audit (0 vulnerabilidades) e `git diff --check` aprovados. Migration revisada, aplicada e lida de volta no staging; nenhum commit/push/Pages ainda.
+- Migration aplicada somente no staging `nsrwjtgzluadienwtnxt`; read-back confirmou 71/71 local/remoto, definição `SECURITY DEFINER` com `search_path` vazio, grant de execução authenticated e negação a anon/PUBLIC. Schema constraints relevantes confirmadas por read-only introspection. Nenhum registro sintético criado.
+- Packager scoped: `partial`, score 71, zero blocking, `safe_to_deliver=false` por heurísticas no bundle preexistente. Re-review independente passou. Preview Pages ainda não publicado; commit/push aguarda próximo passo.
+
 ## 01/11/2026 — Gestão de metas mensais (staging)
 
 - Base de dados staging considerada aprovada por Lucas após testes próprios e da Maykelly. Produção não faz parte desta alteração.
