@@ -1,11 +1,12 @@
 ## 02/11/2026 — correções de permissão e escrita parcial na negociação do perfil
 
-- Feature isolada em `crm-lead-profile-review`; nenhum commit/push/deploy, produção intacta.
+- Feature isolada em `crm-lead-profile-review`; alterações de produção permanecem fora do escopo e intactas.
 - Corrigido gate: `Registrar nota` só aparece com `contacts.write`; `saveNote` também retorna sem mutação quando a permissão falta. `DealCreateDialog` mantém gate `deals.write`.
 - Para contato existente, criação não atualiza telefone/empresa. Para contato novo remoto, migration `20261102130000_atomic_contact_deal_create.sql` e RPC `core_deal_create_with_contact` executam os dois inserts numa única transação; exigem `contacts.write` e `deals.write`, workspace/pipeline/etapa válidos, e deixam a criação totalmente revertida se qualquer insert falhar.
-- Validação final local após essa mudança: suíte serial **46/46 arquivos, 219/219 testes**, typecheck, build, audit (0 vulnerabilidades) e `git diff --check` aprovados. Migration revisada, aplicada e lida de volta no staging; nenhum commit/push/Pages ainda.
+- Validação final local após essa mudança: suíte serial **46/46 arquivos, 219/219 testes**, typecheck, build, audit (0 vulnerabilidades) e `git diff --check` aprovados. Migration revisada, aplicada e lida de volta no staging; preview publicado abaixo.
 - Migration aplicada somente no staging `nsrwjtgzluadienwtnxt`; read-back confirmou 71/71 local/remoto, definição `SECURITY DEFINER` com `search_path` vazio, grant de execução authenticated e negação a anon/PUBLIC. Schema constraints relevantes confirmadas por read-only introspection. Nenhum registro sintético criado.
-- Packager scoped: `partial`, score 71, zero blocking, `safe_to_deliver=false` por heurísticas no bundle preexistente. Re-review independente passou. Preview Pages ainda não publicado; commit/push aguarda próximo passo.
+- Release preview: commit `6bf461dd2ed39153e131d8f66061b24a4ebfb003` em `origin/main`; Pages run `41392935229` success. Root/assets/config responderam HTTP 200, hashes JS/CSS idênticos ao build local e runtime config aponta exclusivamente ao staging. CTA e atomic RPC presentes no JS.
+- Não testado autenticado por agente; Lucas deve entrar para validar UI real. Nenhum registro sintético, produção intacta.
 
 ## 01/11/2026 — Gestão de metas mensais (staging)
 
