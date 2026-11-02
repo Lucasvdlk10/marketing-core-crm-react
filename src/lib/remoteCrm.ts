@@ -483,7 +483,11 @@ export function markAllRemoteNotificationsRead(ids: string[]) {
 }
 /** Leitura sem refresh global; permitida apenas para RPCs read-only auditadas. */
 export function remoteReadRpc<T = unknown>(
-  name: "core_dashboard_preferences_get" | "core_dashboard_goals_list",
+  name:
+    | "core_dashboard_preferences_get"
+    | "core_dashboard_goals_list"
+    | "core_automation_metrics"
+    | "core_automation_report",
   args: Row,
 ): Promise<T> {
   if (!crmApi) return Promise.reject(Error("Supabase não configurado."));

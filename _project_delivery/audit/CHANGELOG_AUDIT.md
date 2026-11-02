@@ -1,3 +1,11 @@
+## 02/11/2026 — Correção de métricas do cartão de automação
+
+- `src/pages/AutomationsPage.tsx`: métricas e relatório passaram a usar RPC de leitura sem reidratar o snapshot; após carregar o relatório, os counters do cartão são atualizados com seu resumo, respostas antigas/fechadas são ignoradas e falhas de métrica aparecem como indisponíveis (`—`), não zero. Card remoto mostra estado publicado em vez de “0 conexões” quando o snapshot não contém o grafo.
+- `src/lib/remoteCrm.ts`: lista de RPCs read-only auditadas inclui `core_automation_metrics` e `core_automation_report`.
+- `src/test/AuthenticatedSupabasePages.test.tsx`: regressões garantem que o card usa leitura sem side effect, sincroniza com relatório fresco, ignora resposta antiga de outro relatório, não transforma falha de RPC em zero e não inventa zero de conexões. RED reproduzido; todas as regressões passaram.
+- Evidência staging read-only: worker v13, último webhook selecionado concluído, ação bem-sucedida e RPC de relatório retornou 1 entrada/1 concluída/0 erro. Sem escrita/migration nesta tarefa.
+- Suite serial 46 arquivos/221 testes, typecheck, build, audit 0 vulnerabilidades, diff-check aprovados. Revisão independente final PASS após corrigir race assíncrona. Concern não bloqueante: aviso global de métrica pode persistir enquanto RPC global não volta, embora relatório atualize o cartão individual. `origin/main` f14f406 e workflow Pages em `main`; config do runtime validada como staging. Packager `partial`, score 71, zero blockers, com 10 heurísticas `CHILD_PROCESS_EXEC_RISK` em bundles browser; nenhuma aplicável ao diff; busca por imports de processo em `src`/`dist` retornou zero. ZIP não declarado pronto. Commit/deploy pendentes; produção intocada.
+
 ## 02/11/2026 — correções de permissão e escrita parcial na negociação do perfil
 
 - Feature isolada em `crm-lead-profile-review`; alterações de produção permanecem fora do escopo e intactas.

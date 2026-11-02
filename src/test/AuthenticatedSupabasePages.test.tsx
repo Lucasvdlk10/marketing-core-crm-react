@@ -1,9 +1,9 @@
-import {fireEvent,render,screen,waitFor,within} from '@testing-library/react';
+import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {MemoryRouter} from 'react-router-dom';
 
-const mocked=vi.hoisted(()=>({rpc:vi.fn(),remoteInsert:vi.fn(),remoteUpdate:vi.fn(),remoteDelete:vi.fn(),listWebhooks:vi.fn(),listRemoteContactActivities:vi.fn(),snapshot:null as any}));
+const mocked=vi.hoisted(()=>({rpc:vi.fn(),readRpc:vi.fn(),remoteInsert:vi.fn(),remoteUpdate:vi.fn(),remoteDelete:vi.fn(),listWebhooks:vi.fn(),listRemoteContactActivities:vi.fn(),snapshot:null as any}));
 vi.mock('../lib/remoteCrm',()=>({
   getRemoteSnapshot:()=>mocked.snapshot,
   getRemoteWorkspaceId:()=>mocked.snapshot?.workspace.id||'',
@@ -12,6 +12,7 @@ vi.mock('../lib/remoteCrm',()=>({
   remoteUpdate:mocked.remoteUpdate,
   remoteDelete:mocked.remoteDelete,
   remoteRpc:mocked.rpc,
+  remoteReadRpc:mocked.readRpc,
   listRemoteContactActivities:mocked.listRemoteContactActivities,
   REMOTE_UPDATED_EVENT:'marketing-core-remote-updated'
 }));
@@ -42,7 +43,7 @@ const baseSnapshot={
 };
 
 describe('authenticated pages use only the remote snapshot',()=>{
-  beforeEach(()=>{mocked.snapshot=structuredClone(baseSnapshot);mocked.rpc.mockReset().mockResolvedValue([]);mocked.remoteInsert.mockReset().mockResolvedValue({});mocked.remoteUpdate.mockReset().mockResolvedValue({});mocked.remoteDelete.mockReset().mockResolvedValue({});mocked.listWebhooks.mockReset().mockResolvedValue([]);mocked.listRemoteContactActivities.mockReset().mockResolvedValue([]);localStorage.clear();localStorage.setItem('marketing_core_segment_lists',JSON.stringify([{id:'local',name:'Segmento local',leads:99}]));localStorage.setItem('marketing_core_automations',JSON.stringify([{id:'local',name:'Automação local',nodes:[],connections:[],createdAt:'hoje'}]));});
+  beforeEach(()=>{mocked.snapshot=structuredClone(baseSnapshot);mocked.rpc.mockReset().mockResolvedValue([]);mocked.readRpc.mockReset().mockResolvedValue([]);mocked.remoteInsert.mockReset().mockResolvedValue({});mocked.remoteUpdate.mockReset().mockResolvedValue({});mocked.remoteDelete.mockReset().mockResolvedValue({});mocked.listWebhooks.mockReset().mockResolvedValue([]);mocked.listRemoteContactActivities.mockReset().mockResolvedValue([]);localStorage.clear();localStorage.setItem('marketing_core_segment_lists',JSON.stringify([{id:'local',name:'Segmento local',leads:99}]));localStorage.setItem('marketing_core_automations',JSON.stringify([{id:'local',name:'Automação local',nodes:[],connections:[],createdAt:'hoje'}]));});
 
   it('renders campaigns from core_campaigns',()=>{render(<CampaignsPage/>);expect(screen.getByText('Campanha remota')).toBeInTheDocument();expect(screen.getByText((value)=>value.replace(/\s/g,' ')==='R$ 5.000')).toBeInTheDocument();});
 
@@ -121,18 +122,57 @@ describe('authenticated pages use only the remote snapshot',()=>{
 
   it('shows the remote error inside the negotiation dialog instead of appearing to ignore the button',async()=>{mocked.snapshot.contacts[0].phone='31999995125';mocked.remoteInsert.mockRejectedValue(new Error('Falha real do Supabase'));const user=userEvent.setup();render(<PipelinePage/>);await user.click(screen.getByRole('button',{name:/Nova negociação/i}));await user.clear(screen.getByLabelText('Nome da negociação'));await user.type(screen.getByLabelText('Nome da negociação'),'Venda produto');await user.type(screen.getByLabelText('Telefone'),'31999995125');await user.click(screen.getByRole('button',{name:'Vincular Contato remoto'}));await user.click(screen.getByRole('button',{name:'Criar negociação'}));const dialog=screen.getByRole('dialog',{name:'Registrar nova negociação'});expect(within(dialog).getByRole('alert')).toHaveTextContent('Falha real do Supabase');});
 
-  it('lists automation rules through the authenticated remote snapshot, not localStorage',()=>{render(<AutomationsPage/>);expect(screen.getByText('Automação remota')).toBeInTheDocument();expect(screen.queryByText('Automação local')).not.toBeInTheDocument();});
+  it('lists automation rules through the authenticated remote snapshot, not localStorage',()=>{render(<AutomationsPage/>);expect(screen.getByText('Automação remota')).toBeInTheDocument();expect(screen.queryByText('Automação local')).not.toBeInTheDocument();expect(screen.getByText('Fluxo publicado')).toBeInTheDocument();expect(screen.queryByText('0 conexões')).not.toBeInTheDocument();});
 
-  it('shows automation execution metrics and opens the per-step report',async()=>{
-    mocked.rpc.mockImplementation(async(name:string)=>name==='core_automation_metrics'?[{rule_id:'rule-1',entered_count:23,running_count:2,completed_count:20,failed_count:1}]:name==='core_automation_report'?{summary:{entered:23,running:2,completed:20,failed:1},steps:[{node_id:'deal',label:'Criar negociação',reached:22,completed:21,failed:1}],leads:[{contact_id:'contact-1',contact_name:'Contato remoto',status:'running',current_step:'Criar negociação'}]}:[]);
+  it('shows unavailable automation metrics instead of misleading zeroes after a read failure',async()=>{
+    mocked.readRpc.mockRejectedValue(new Error('network unavailable'));
+    render(<AutomationsPage/>);
+    expect(await screen.findByRole('status')).toHaveTextContent('Métricas indisponíveis');
+    const card=screen.getByText('Automação remota').closest('article');
+    expect(card).not.toBeNull();
+    expect(within(card!).queryByText((_,element)=>element?.textContent==='0 leads entraram')).not.toBeInTheDocument();
+    expect(within(card!).getAllByText('—')).toHaveLength(4);
+  });
+
+  it('loads automation counters and report through side-effect-free read RPCs',async()=>{
+    mocked.readRpc.mockImplementation(async(name:string)=>name==='core_automation_metrics'?[{rule_id:'rule-1',entered_count:0,running_count:0,completed_count:0,failed_count:0}]:name==='core_automation_report'?{summary:{entered:23,running:2,completed:20,failed:1},steps:[{node_id:'deal',label:'Criar negociação',reached:22,completed:21,failed:1}],leads:[{contact_id:'contact-1',contact_name:'Contato remoto',status:'running',current_step:'Criar negociação'}]}:[]);
     const user=userEvent.setup();render(<AutomationsPage/>);
-    expect(await screen.findByText((_,element)=>element?.textContent==='23 leads entraram')).toBeInTheDocument();
-    expect(screen.getByText((_,element)=>element?.textContent==='20 finalizaram')).toBeInTheDocument();
+    expect(await screen.findByText((_,element)=>element?.textContent==='0 leads entraram')).toBeInTheDocument();
+    expect(screen.getByText((_,element)=>element?.textContent==='0 finalizaram')).toBeInTheDocument();
     await user.click(screen.getByRole('button',{name:'Relatório Automação remota'}));
     const dialog=await screen.findByRole('dialog',{name:'Relatório da automação Automação remota'});
     expect(within(dialog).getAllByText('Criar negociação')).toHaveLength(2);
     expect(within(dialog).getByText('Contato remoto')).toBeInTheDocument();
-    expect(mocked.rpc).toHaveBeenCalledWith('core_automation_report',{p_workspace:'workspace-1',p_rule_id:'rule-1'});
+    expect(await screen.findByText((_,element)=>element?.textContent==='23 leads entraram')).toBeInTheDocument();
+    expect(mocked.readRpc).toHaveBeenCalledWith('core_automation_metrics',{p_workspace:'workspace-1'});
+    expect(mocked.readRpc).toHaveBeenCalledWith('core_automation_report',{p_workspace:'workspace-1',p_rule_id:'rule-1'});
+    expect(mocked.rpc).not.toHaveBeenCalledWith('core_automation_metrics',{p_workspace:'workspace-1'});
+    expect(mocked.rpc).not.toHaveBeenCalledWith('core_automation_report',{p_workspace:'workspace-1',p_rule_id:'rule-1'});
+  });
+
+  it('ignores a stale automation report after a newer report request opens',async()=>{
+    let resolveFirst!:(value:any)=>void;
+    let resolveSecond!:(value:any)=>void;
+    mocked.snapshot.automations.push({id:'rule-2',name:'Segunda automação',enabled:true,creator_id:'user-1',active_revision_id:'revision-2',updated_at:'2026-10-02T00:00:00Z'});
+    mocked.readRpc.mockImplementation((name:string,args:any)=>{
+      if(name==='core_automation_metrics')return Promise.resolve([{rule_id:'rule-1',entered_count:0,running_count:0,completed_count:0,failed_count:0},{rule_id:'rule-2',entered_count:0,running_count:0,completed_count:0,failed_count:0}]);
+      if(name==='core_automation_report')return new Promise(resolve=>{if(args.p_rule_id==='rule-1')resolveFirst=resolve;else resolveSecond=resolve});
+      return Promise.resolve([]);
+    });
+    const user=userEvent.setup();render(<AutomationsPage/>);
+    const firstCard=screen.getByText('Automação remota').closest('article');
+    const secondCard=screen.getByText('Segunda automação').closest('article');
+    expect(firstCard).not.toBeNull();expect(secondCard).not.toBeNull();
+    await user.click(screen.getByRole('button',{name:'Relatório Automação remota'}));
+    await screen.findByRole('dialog',{name:'Relatório da automação Automação remota'});
+    await user.click(screen.getByRole('button',{name:'Fechar relatório'}));
+    await user.click(screen.getByRole('button',{name:'Relatório Segunda automação'}));
+    await screen.findByRole('dialog',{name:'Relatório da automação Segunda automação'});
+    await act(async()=>resolveSecond({summary:{entered:2,running:0,completed:2,failed:0},steps:[],leads:[]}));
+    await waitFor(()=>expect(within(secondCard!).getByText((_,element)=>element?.textContent==='2 leads entraram')).toBeInTheDocument());
+    await act(async()=>resolveFirst({summary:{entered:9,running:0,completed:9,failed:0},steps:[],leads:[]}));
+    expect(within(firstCard!).getByText((_,element)=>element?.textContent==='0 leads entraram')).toBeInTheDocument();
+    expect(within(secondCard!).getByText((_,element)=>element?.textContent==='2 leads entraram')).toBeInTheDocument();
   });
 
   it('reports how many existing segment leads were queued when the automation is saved',async()=>{
