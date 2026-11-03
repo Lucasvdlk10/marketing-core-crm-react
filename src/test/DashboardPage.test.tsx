@@ -1,22 +1,18 @@
-import {render,screen,within,fireEvent,waitFor} from '@testing-library/react';
+import {act,render,screen,within,fireEvent,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import {DashboardPage} from '../pages/DashboardPage';
 
 const rpc=vi.fn();
+const configuredTeams=[{id:'team-1',name:'Equipe Closers',member_ids:['user-1']},{id:'team-2',name:'Equipe SDR',member_ids:['user-2']}];
+const configuredContacts=[{id:'lead-oct',name:'Lead Outubro',source:'Google Ads',status:'active',created_at:'2026-10-10T12:00:00Z'},{id:'lead-sep',name:'Lead Setembro',source:'Indicação',status:'active',created_at:'2026-09-10T12:00:00Z'}];
+const configuredDeals=[{id:'deal-open',name:'Aberta',value:1000,status:'open',owner_id:'user-1',stage_id:'stage-1',pipeline_id:'pipe-1',created_at:'2026-10-05T12:00:00Z',updated_at:'2026-10-20T12:00:00Z'},{id:'deal-won',name:'Ganha',value:5000,status:'won',owner_id:'user-1',stage_id:'stage-2',pipeline_id:'pipe-1',created_at:'2026-10-01T12:00:00Z',updated_at:'2026-10-15T12:00:00Z'},{id:'deal-other',name:'Outra equipe',value:3000,status:'won',owner_id:'user-2',stage_id:'stage-2',pipeline_id:'pipe-1',created_at:'2026-10-02T12:00:00Z',updated_at:'2026-10-16T12:00:00Z'}];
 const snapshot={
  workspace:{id:'workspace-1',name:'Marketing Core'},membership:{role:'owner'},rolePermissions:[],summary:null,
- contacts:[
-  {id:'lead-oct',name:'Lead Outubro',source:'Google Ads',status:'active',created_at:'2026-10-10T12:00:00Z'},
-  {id:'lead-sep',name:'Lead Setembro',source:'Indicação',status:'active',created_at:'2026-09-10T12:00:00Z'},
- ],
- deals:[
-  {id:'deal-open',name:'Aberta',value:1000,status:'open',owner_id:'user-1',stage_id:'stage-1',pipeline_id:'pipe-1',created_at:'2026-10-05T12:00:00Z',updated_at:'2026-10-20T12:00:00Z'},
-  {id:'deal-won',name:'Ganha',value:5000,status:'won',owner_id:'user-1',stage_id:'stage-2',pipeline_id:'pipe-1',created_at:'2026-10-01T12:00:00Z',updated_at:'2026-10-15T12:00:00Z'},
-  {id:'deal-other',name:'Outra equipe',value:3000,status:'won',owner_id:'user-2',stage_id:'stage-2',pipeline_id:'pipe-1',created_at:'2026-10-02T12:00:00Z',updated_at:'2026-10-16T12:00:00Z'},
- ],
+ contacts:configuredContacts.map(contact=>({...contact})),
+ deals:configuredDeals.map(deal=>({...deal})),
  stages:[{id:'stage-1',name:'Qualificação',position:1},{id:'stage-2',name:'Fechado',position:2}],pipelines:[{id:'pipe-1',name:'Comercial'}],
- teamGroups:[{id:'team-1',name:'Equipe Closers',member_ids:['user-1']},{id:'team-2',name:'Equipe SDR',member_ids:['user-2']}],
+ teamGroups:[...configuredTeams],
  members:[{user_id:'user-1',full_name:'Maykelly'},{user_id:'user-2',full_name:'Lucas'}],
  tasks:[],tags:[],contactTags:[],notifications:[],campaigns:[],segmentLists:[],segmentMembers:[],automations:[],importHistory:[],
 };
@@ -24,14 +20,85 @@ vi.mock('../lib/remoteCrm',()=>({isRemoteMode:()=>true,getRemoteWorkspaceId:()=>
 vi.mock('../lib/useRemoteSnapshot',()=>({useRemoteSnapshot:()=>snapshot}));
 
 const localISO=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+const periodRange=(days:number)=>{const today=new Date();return{start:localISO(new Date(today.getFullYear(),today.getMonth(),today.getDate()-days+1)),end:localISO(today)}};
+const chooseCustomPeriod=()=>fireEvent.change(screen.getByLabelText('Período da visão geral'),{target:{value:'custom'}});
 const monthPeriod=(offset=0)=>{const now=new Date();const start=new Date(now.getFullYear(),now.getMonth()+offset,1);const end=new Date(now.getFullYear(),now.getMonth()+offset+1,0);return{start:localISO(start),end:localISO(end)}};
 const goalFor=(id:string,name:string,period:{start:string;end:string})=>({id,name,metric:'revenue' as const,target_value:10000,team_id:null,notify_role:null,starts_on:period.start,ends_on:period.end});
 
-beforeEach(()=>{rpc.mockReset();rpc.mockImplementation(async(name:string)=>name==='core_dashboard_preferences_get'?{layout:null,selected_team_id:null}:name==='core_dashboard_goals_list'?[{id:'goal-1',name:'Meta mensal',metric:'revenue',target_value:10000,team_id:'team-1',starts_on:'2026-10-01',ends_on:'2026-10-31'}]:name==='core_dashboard_goal_upsert'?{id:'goal-new'}:{});});
+beforeEach(()=>{snapshot.contacts.splice(0,snapshot.contacts.length,...configuredContacts.map(contact=>({...contact})));snapshot.deals.splice(0,snapshot.deals.length,...configuredDeals.map(deal=>({...deal})));snapshot.teamGroups.splice(0,snapshot.teamGroups.length,...configuredTeams);rpc.mockReset();rpc.mockImplementation(async(name:string)=>name==='core_dashboard_preferences_get'?{layout:null,selected_team_id:null}:name==='core_dashboard_goals_list'?[{id:'goal-1',name:'Meta mensal',metric:'revenue',target_value:10000,team_id:'team-1',starts_on:'2026-10-01',ends_on:'2026-10-31'}]:name==='core_dashboard_goal_upsert'?{id:'goal-new'}:{});});
 
 describe('DashboardPage',()=>{
+ it('defaults to the last 30 days and offers 15-day, weekly and custom periods',()=>{
+  const initialRange=periodRange(30);
+  render(<DashboardPage/>);
+  const period=screen.getByRole('combobox',{name:'Período da visão geral'});
+  expect(Array.from((period as HTMLSelectElement).options).map(option=>option.textContent)).toEqual(['Últimos 30 dias','Últimos 15 dias','Última semana','Período personalizado']);
+  expect(period).toHaveValue('30');
+  expect(screen.queryByLabelText('Data inicial')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Data final')).not.toBeInTheDocument();
+  fireEvent.change(period,{target:{value:'custom'}});
+  expect(screen.getByLabelText('Data inicial')).toHaveValue(initialRange.start);
+  expect(screen.getByLabelText('Data final')).toHaveValue(initialRange.end);
+  fireEvent.change(period,{target:{value:'15'}});
+  expect(period).toHaveValue('15');
+  expect(screen.queryByLabelText('Data inicial')).not.toBeInTheDocument();
+  fireEvent.change(period,{target:{value:'custom'}});
+  expect(screen.getByLabelText('Data inicial')).toHaveValue(initialRange.start);
+  expect(screen.getByLabelText('Data final')).toHaveValue(initialRange.end);
+  fireEvent.change(period,{target:{value:'7'}});
+  expect(period).toHaveValue('7');
+  fireEvent.change(period,{target:{value:'custom'}});
+  expect(screen.getByLabelText('Data inicial')).toHaveValue(initialRange.start);
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
+  fireEvent.change(period,{target:{value:'15'}});
+  fireEvent.change(period,{target:{value:'custom'}});
+  expect(screen.getByLabelText('Data inicial')).toHaveValue('2026-10-01');
+  expect(screen.getByLabelText('Data final')).toHaveValue('2026-10-31');
+  expect(screen.getByTestId('metric-leads')).toHaveTextContent('1');
+  expect(screen.getByTestId('metric-revenue')).toHaveTextContent('R$ 8.000');
+ });
+
+ it('hides the team selector with one team and ignores a stale saved team filter',async()=>{
+  snapshot.teamGroups.splice(0,snapshot.teamGroups.length,configuredTeams[0]);
+  let resolvePreference!:(value:{layout:null;selected_team_id:string})=>void;
+  rpc.mockImplementation((name:string)=>name==='core_dashboard_preferences_get'?new Promise(resolve=>{resolvePreference=resolve}):name==='core_dashboard_goals_list'?Promise.resolve([{id:'orphan-goal',name:'Meta de outra equipe',metric:'revenue',target_value:10000,team_id:'team-2',notify_role:null,starts_on:'2026-10-01',ends_on:'2026-10-31'}]):Promise.resolve({}));
+  render(<DashboardPage/>);
+  chooseCustomPeriod();
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
+  expect(screen.queryByLabelText('Perfil de equipe')).not.toBeInTheDocument();
+  await act(async()=>{resolvePreference({layout:null,selected_team_id:'deleted-team'});});
+  expect(screen.getByTestId('metric-revenue')).toHaveTextContent('R$ 8.000');
+  expect(screen.getByTestId('dashboard-block-goals')).toBeInTheDocument();
+  expect(screen.getByText('Meta de outra equipe')).toBeInTheDocument();
+ });
+
+ it('hides the open-pipeline value card when its value is zero but keeps populated cards',()=>{
+  snapshot.deals.find(deal=>deal.status==='open')!.value=0;
+  render(<DashboardPage/>);
+  chooseCustomPeriod();
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
+  expect(screen.getByTestId('dashboard-block-open')).toBeInTheDocument();
+  expect(screen.queryByTestId('dashboard-block-pipeline')).not.toBeInTheDocument();
+  expect(screen.getByTestId('dashboard-block-revenue')).toBeInTheDocument();
+  expect(screen.getByText('Funil do período')).toBeInTheDocument();
+ });
+
+ it('shows an empty-state instead of empty dashboard cards when the selected scope has no data',async()=>{
+  snapshot.contacts.splice(0,snapshot.contacts.length);
+  snapshot.deals.splice(0,snapshot.deals.length);
+  rpc.mockImplementation(async(name:string)=>name==='core_dashboard_preferences_get'?{layout:null,selected_team_id:null}:name==='core_dashboard_goals_list'?[]:{});
+  render(<DashboardPage/>);
+  await act(async()=>{await Promise.resolve();});
+  expect(screen.getByTestId('dashboard-no-data')).toBeInTheDocument();
+  for(const id of ['leads','open','pipeline','revenue','velocity','goals','activity','funnel'])expect(screen.queryByTestId(`dashboard-block-${id}`)).not.toBeInTheDocument();
+ });
+
  it('applies one global date filter to every indicator and chart',async()=>{
   const user=userEvent.setup();render(<DashboardPage/>);
+  chooseCustomPeriod();
   fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
   fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   expect(screen.getByTestId('metric-leads')).toHaveTextContent('1');
@@ -41,6 +108,7 @@ describe('DashboardPage',()=>{
 
  it('opens a detailed side panel when an indicator is clicked',async()=>{
   const user=userEvent.setup();render(<DashboardPage/>);
+  chooseCustomPeriod();
   fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
   fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   await user.click(screen.getByRole('button',{name:/Detalhes de Leads ativos/i}));
@@ -52,6 +120,7 @@ describe('DashboardPage',()=>{
 
  it('segments the dashboard by custom team and shows velocity and goal progress',async()=>{
   const user=userEvent.setup();render(<DashboardPage/>);
+  chooseCustomPeriod();
   fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
   fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   await user.selectOptions(screen.getByLabelText('Perfil de equipe'),'team-1');
@@ -78,6 +147,9 @@ describe('DashboardPage',()=>{
 
  it('renders every dashboard block as draggable and resizable and persists layout changes',async()=>{
   render(<DashboardPage/>);
+  chooseCustomPeriod();
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   const block=await screen.findByTestId('dashboard-block-leads');
   expect(block).toHaveClass('react-grid-item');
   expect(block.querySelector('.react-resizable-handle')).toBeInTheDocument();
