@@ -7,7 +7,7 @@ vi.mock('../lib/remoteCrm',()=>({
   markRemoteNotificationRead:remote.mark,
   markAllRemoteNotificationsRead:remote.markAll,
 }));
-import {markAllNotificationsRead,markNotificationRead} from '../lib/notifications';
+import {getNotifications,markAllNotificationsRead,markNotificationRead} from '../lib/notifications';
 
 describe('persistência de notificações',()=>{
   beforeEach(()=>{remote.mark.mockReset();remote.markAll.mockReset();remote.snapshot.mockReturnValue({notifications:[{id:'n1',title:'Um',body:'',created_at:new Date().toISOString(),read_at:null,kind:'task',task_id:null},{id:'n2',title:'Dois',body:'',created_at:new Date().toISOString(),read_at:null,kind:'task',task_id:null}]})});
@@ -22,5 +22,9 @@ describe('persistência de notificações',()=>{
     remote.markAll.mockRejectedValue(new Error('Falha no Supabase'));
     await expect(markAllNotificationsRead()).rejects.toThrow('Falha no Supabase');
     expect(remote.markAll).toHaveBeenCalledWith(['n1','n2']);
+  });
+  it('encaminha uma solicitação de motivo de perda para a negociação correta',()=>{
+    remote.snapshot.mockReturnValue({notifications:[{id:'loss-request',title:'Motivo solicitado',body:'',created_at:new Date().toISOString(),read_at:null,kind:'deal_loss_reason_request',task_id:null,deal_id:'deal-42'}]});
+    expect(getNotifications()).toEqual([expect.objectContaining({id:'loss-request',route:'/pipeline?deal=deal-42',tone:'deal'})]);
   });
 });

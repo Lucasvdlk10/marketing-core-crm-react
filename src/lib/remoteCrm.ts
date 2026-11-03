@@ -64,6 +64,7 @@ export type RemoteTask = {
   priority: "low" | "normal" | "high";
   status: "todo" | "done";
   assigned_to: string | null;
+  task_type: "call" | "meeting" | "other" | null;
   created_at: string;
   updated_at: string;
 };
@@ -83,6 +84,7 @@ export type RemoteNotification = {
   workspace_id: string;
   user_id: string;
   task_id: string | null;
+  deal_id: string | null;
   kind: string;
   title: string;
   body: string | null;
@@ -306,7 +308,7 @@ export async function bootstrapRemoteCrm(
     ),
     select<RemoteTask>(
       "core_tasks",
-      `select=id,workspace_id,contact_id,deal_id,title,description,due_at,priority,status,assigned_to,created_at,updated_at&workspace_id=eq.${encode(w)}&order=due_at.asc.nullslast,created_at.desc`,
+      `select=id,workspace_id,contact_id,deal_id,title,description,due_at,priority,status,assigned_to,task_type,created_at,updated_at&workspace_id=eq.${encode(w)}&order=due_at.asc.nullslast,created_at.desc`,
     ),
     select<RemoteTag>(
       "core_tags",
@@ -318,7 +320,7 @@ export async function bootstrapRemoteCrm(
     ),
     select<RemoteNotification>(
       "core_notifications",
-      `select=id,workspace_id,user_id,task_id,kind,title,body,read_at,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc`,
+      `select=id,workspace_id,user_id,task_id,deal_id,kind,title,body,read_at,created_at&workspace_id=eq.${encode(w)}&order=created_at.desc`,
     ),
     crmApi.rpc("core_member_display_names", { w }) as Promise<
       Array<{ user_id: string; full_name: string }>
@@ -487,7 +489,15 @@ export function remoteReadRpc<T = unknown>(
     | "core_dashboard_preferences_get"
     | "core_dashboard_goals_list"
     | "core_automation_metrics"
-    | "core_automation_report",
+    | "core_automation_report"
+    | "core_team_groups"
+    | "core_presence_usage_report_v2"
+    | "core_presence_user_detail_v2"
+    | "core_reports_loss_summary"
+    | "core_reports_loss_user_reasons"
+    | "core_reports_lost_deals_page"
+    | "core_reports_task_analytics"
+    | "core_reports_leads_by_origin",
   args: Row,
 ): Promise<T> {
   if (!crmApi) return Promise.reject(Error("Supabase não configurado."));

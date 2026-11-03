@@ -17,6 +17,21 @@ export function getCalendarPeriodRange(preset:string,now=new Date(),customFrom?:
   return{from:dateKey(shiftDays(now,1-days)),to:dateKey(now)};
 }
 
+export function isCalendarRangeWithinDays(range:CalendarRange,maximumDays=366):boolean{
+  if(!Number.isInteger(maximumDays)||maximumDays<1)return false;
+  const dayIndex=(value:string)=>{
+    const parts=value.split('-');
+    if(parts.length!==3||parts[0].length!==4||parts[1].length!==2||parts[2].length!==2||parts.some(part=>[...part].some(character=>character<'0'||character>'9')))return null;
+    const year=Number(parts[0]);const month=Number(parts[1]);const day=Number(parts[2]);
+    const parsed=new Date(0);parsed.setUTCHours(0,0,0,0);parsed.setUTCFullYear(year,month-1,day);
+    const timestamp=parsed.getTime();
+    if(parsed.getUTCFullYear()!==year||parsed.getUTCMonth()!==month-1||parsed.getUTCDate()!==day)return null;
+    return Math.floor(timestamp/86400000);
+  };
+  const fromDay=dayIndex(range.from);const toDay=dayIndex(range.to);
+  return fromDay!==null&&toDay!==null&&toDay>=fromDay&&toDay-fromDay+1<=maximumDays;
+}
+
 const localDateKey=(value:string)=>{
   const date=new Date(value);
   if(Number.isNaN(date.getTime()))return null;

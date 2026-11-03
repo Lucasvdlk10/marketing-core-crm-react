@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {buildLossReport,getCalendarPeriodRange} from '../lib/lossReportData';
+import {buildLossReport,getCalendarPeriodRange,isCalendarRangeWithinDays} from '../lib/lossReportData';
 
 const deals=[
   {id:'old-deal',contact_id:'lead-1',name:'Projeto A',value:'2000',status:'lost',loss_reason:'Preço/orçamento',created_at:'2026-09-01T10:00:00-03:00',updated_at:'2026-10-30T11:00:00-03:00'},
@@ -34,5 +34,14 @@ describe('relatório de motivos de perda',()=>{
     expect(getCalendarPeriodRange('7',today)).toEqual({from:'2026-10-24',to:'2026-10-30'});
     expect(getCalendarPeriodRange('month',today)).toEqual({from:'2026-10-01',to:'2026-10-30'});
     expect(getCalendarPeriodRange('previous-month',today)).toEqual({from:'2026-09-01',to:'2026-09-30'});
+  });
+
+  it('allows at most 366 inclusive calendar days in a report range',()=>{
+    expect(isCalendarRangeWithinDays({from:'2025-10-01',to:'2026-10-01'})).toBe(true);
+    expect(isCalendarRangeWithinDays({from:'2025-09-30',to:'2026-10-01'})).toBe(false);
+    expect(isCalendarRangeWithinDays({from:'2026-10-01',to:'2026-10-01'})).toBe(true);
+    expect(isCalendarRangeWithinDays({from:'2026-10-02',to:'2026-10-01'})).toBe(false);
+    expect(isCalendarRangeWithinDays({from:'2026-1-01',to:'2026-10-01'})).toBe(false);
+    expect(isCalendarRangeWithinDays({from:'2026-10-01x',to:'2026-10-02'})).toBe(false);
   });
 });

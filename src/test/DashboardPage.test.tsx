@@ -83,7 +83,21 @@ describe('DashboardPage',()=>{
   expect(screen.getByTestId('dashboard-block-open')).toBeInTheDocument();
   expect(screen.queryByTestId('dashboard-block-pipeline')).not.toBeInTheDocument();
   expect(screen.getByTestId('dashboard-block-revenue')).toBeInTheDocument();
-  expect(screen.getByText('Funil do período')).toBeInTheDocument();
+  expect(screen.getByText('Distribuição do funil')).toBeInTheDocument();
+ });
+
+ it('shows the requested funnel distribution and commercial indicators in the overview',()=>{
+  render(<DashboardPage/>);
+  chooseCustomPeriod();
+  fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
+  fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
+  expect(screen.getByTestId('dashboard-block-funnel')).toBeInTheDocument();
+  expect(screen.getByTestId('dashboard-block-commercial')).toBeInTheDocument();
+  expect(screen.getByText('Distribuição do funil')).toBeInTheDocument();
+    expect(screen.getByText('Indicadores comerciais')).toBeInTheDocument();
+  expect(screen.getByText('Taxa de conversão')).toBeInTheDocument();
+  expect(screen.getByText('Ticket médio')).toBeInTheDocument();
+  expect(screen.getByText('Perdas registradas')).toBeInTheDocument();
  });
 
  it('shows an empty-state instead of empty dashboard cards when the selected scope has no data',async()=>{
@@ -93,7 +107,7 @@ describe('DashboardPage',()=>{
   render(<DashboardPage/>);
   await act(async()=>{await Promise.resolve();});
   expect(screen.getByTestId('dashboard-no-data')).toBeInTheDocument();
-  for(const id of ['leads','open','pipeline','revenue','velocity','goals','activity','funnel'])expect(screen.queryByTestId(`dashboard-block-${id}`)).not.toBeInTheDocument();
+  for(const id of ['leads','open','pipeline','revenue','velocity','goals','activity','funnel','commercial'])expect(screen.queryByTestId(`dashboard-block-${id}`)).not.toBeInTheDocument();
  });
 
  it('applies one global date filter to every indicator and chart',async()=>{
@@ -145,16 +159,21 @@ describe('DashboardPage',()=>{
   expect(rpc).toHaveBeenCalledWith('core_dashboard_goal_upsert',expect.objectContaining({p_workspace:'workspace-1',p_id:null,p_name:'Receita novembro',p_target_value:20000,p_starts_on:month.start,p_ends_on:month.end}));
  });
 
- it('renders every dashboard block as draggable and resizable and persists layout changes',async()=>{
+ it('keeps resizing disabled until the user opens edit mode',async()=>{
+  const user=userEvent.setup();
   render(<DashboardPage/>);
   chooseCustomPeriod();
   fireEvent.change(screen.getByLabelText('Data inicial'),{target:{value:'2026-10-01'}});
   fireEvent.change(screen.getByLabelText('Data final'),{target:{value:'2026-10-31'}});
   const block=await screen.findByTestId('dashboard-block-leads');
   expect(block).toHaveClass('react-grid-item');
-  expect(block.querySelector('.react-resizable-handle')).toBeInTheDocument();
-  expect(block.querySelector('.dashboard-drag-handle')).toBeInTheDocument();
-  expect(rpc).toHaveBeenCalledWith('core_dashboard_preferences_get',{p_workspace:'workspace-1'});
+  expect(screen.getByTestId('dashboard-grid-shell')).not.toHaveClass('is-editing');
+  await user.click(screen.getByRole('button',{name:'Editar visão geral'}));
+  expect(screen.getByRole('button',{name:'Aplicar alterações'})).toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Cancelar edição'})).toBeInTheDocument();
+  expect(screen.getByTestId('dashboard-grid-shell')).toHaveClass('is-editing');
+  await user.click(screen.getByRole('button',{name:'Cancelar edição'}));
+  expect(rpc).not.toHaveBeenCalledWith('core_dashboard_preferences_save',expect.anything());
  });
 
  it('allows editing only goals in the current month',async()=>{

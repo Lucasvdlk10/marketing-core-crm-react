@@ -13,6 +13,7 @@ import {
   saveCalendarTaskRecord,
   subscribeCalendarTasks,
   type CalendarTaskRecord,
+  type CalendarTaskType,
 } from "../lib/calendarTasks";
 type TaskView = CalendarTaskRecord & { leadId: string };
 const dateValue = (date: Date) =>
@@ -47,10 +48,13 @@ const emptyTask = (): TaskView => ({
   company: "",
   assignee: "",
   priority: "Média",
+  taskType: "other",
   status: "Pendente",
   notes: "",
   source: "manual",
 });
+const taskTypeLabel = (taskType?: CalendarTaskType | null) =>
+  taskType === "call" ? "Ligação" : taskType === "meeting" ? "Reunião" : taskType === "other" ? "Outra" : "Sem classificação";
 export function TasksPage({ preview = false }: { preview?: boolean }) {
   const canWrite=currentCapability('tasks.write',preview);const canDelete=currentCapability('tasks.delete',preview);
   const [version, setVersion] = useState(0);
@@ -258,6 +262,11 @@ export function TasksPage({ preview = false }: { preview?: boolean }) {
             { key: "leadName", label: "LEAD" },
             { key: "assignee", label: "RESPONSÁVEL" },
             {
+              key: "taskType",
+              label: "TIPO",
+              render: (row) => <span className="task-type-badge">{taskTypeLabel(row.taskType)}</span>,
+            },
+            {
               key: "date",
               label: "PRAZO",
               render: (row) => (
@@ -397,6 +406,18 @@ export function TasksPage({ preview = false }: { preview?: boolean }) {
                 </select>
               </label>
               <label className="field">
+                <span>Tipo</span>
+                <select
+                  aria-label="Tipo da tarefa"
+                  value={draft.taskType || "other"}
+                  onChange={(event) => setDraft({ ...draft, taskType: event.target.value as CalendarTaskType })}
+                >
+                  <option value="call">Ligação</option>
+                  <option value="meeting">Reunião</option>
+                  <option value="other">Outra</option>
+                </select>
+              </label>
+              <label className="field">
                 <span>Lead ou contato</span>
                 <input
                   aria-label="Lead da tarefa"
@@ -514,6 +535,10 @@ export function TasksPage({ preview = false }: { preview?: boolean }) {
               <div>
                 <span>Prioridade</span>
                 <strong>{selected.priority}</strong>
+              </div>
+              <div>
+                <span>Tipo</span>
+                <strong>{taskTypeLabel(selected.taskType)}</strong>
               </div>
               <div>
                 <span>Status</span>
@@ -648,6 +673,19 @@ export function TasksPage({ preview = false }: { preview?: boolean }) {
                   <option>Alta</option>
                   <option>Média</option>
                   <option>Baixa</option>
+                </select>
+                              </label>
+                              <label className="field">
+                                <span>Tipo</span>
+                <select
+                  aria-label="Tipo da tarefa"
+                  value={draft.taskType ?? ""}
+                  onChange={(event) => setDraft({ ...draft, taskType: (event.target.value || null) as CalendarTaskType | null })}
+                >
+                  <option value="">Sem classificação</option>
+                  <option value="call">Ligação</option>
+                  <option value="meeting">Reunião</option>
+                  <option value="other">Outra</option>
                 </select>
               </label>
               <label className="field">

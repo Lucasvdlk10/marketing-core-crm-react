@@ -92,6 +92,16 @@ describe("authenticated remote adapter", () => {
     );
   });
 
+  it("loads structured task type and deal-linked notification fields", async () => {
+    await bootstrapRemoteCrm(session);
+    expect(api.request).toHaveBeenCalledWith(
+      expect.stringContaining("core_tasks?select=id,workspace_id,contact_id,deal_id,title,description,due_at,priority,status,assigned_to,task_type,created_at,updated_at"),
+    );
+    expect(api.request).toHaveBeenCalledWith(
+      expect.stringContaining("core_notifications?select=id,workspace_id,user_id,task_id,deal_id,kind,title,body,read_at,created_at"),
+    );
+  });
+
   it("does not block CRM bootstrap when the member role has no automation permission",async()=>{
     api.request.mockImplementation((path:string)=>path.includes('core_memberships')?[{...membership,role:'closer'}]:respond(path));
     api.rpc.mockImplementation((name:string)=>name==='core_automation_list'?Promise.reject(new Error('Forbidden')):name==='core_dashboard_summary'?{}:[]);
