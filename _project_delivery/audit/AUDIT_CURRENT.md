@@ -272,3 +272,12 @@ Arquivos rastreados modificados incluem páginas/componentes de Contacts, Tasks,
 - Validação no estado corrigido: suíte serial 48 arquivos/225 testes aprovados; typecheck/build aprovados; `npm audit --audit-level=moderate` sem vulnerabilidades; `git diff --check` aprovado. Build conserva avisos conhecidos de `config.js` runtime e chunk >500 KB.
 - O diretório `_incoming_scalability_package/` contém material de referência parcial, incluindo arquivos compactados/dump de raciocínio; manter fora do commit de implementação. A revisão deve cobrir exatamente o conjunto de código/auditoria a ser commitado. Produção, banco, Git remoto e deploy não foram alterados.
 
+## 2026-11-04 — Publicação do React no staging GitHub Pages
+
+- A alteração local aprovada foi integrada sobre o `origin/main` atualizado `ca4ac659095578ac92844d3a77c49c65814f6f5a`, preservando os nove commits remotos posteriores à base local. Commit integrado `afd8cc6`; ajuste de UX/teste `f7748c0eca775ebcab8b05dcc2810174701999d0`.
+- Revisão independente final aprovada para GitHub Pages staging apenas. Existente lead permanece sem escrita quando a negociação é criada; o RPC atômico é usado quando é necessário criar novo contato+negociação. Empresa do lead vinculado agora fica read-only, inclusive vazia, com texto informando que o contato não será alterado.
+- Validação exata antes do push: suíte serial 50 arquivos/255 testes; typecheck/build/audit de dependências e `git diff --check` aprovados. Avisos conhecidos de config.js runtime e chunk principal >500 kB.
+- `f7748c0eca775ebcab8b05dcc2810174701999d0` foi lido de volta em `refs/heads/main`. GitHub Actions Pages workflow 41851727185 concluiu `success` para esse SHA.
+- Verificação pública pós-deploy: root do GitHub Pages HTTP 200 (`Marketing Core - CRM`), bundle JS HTTP 200, CSS HTTP 200; `config.js` aponta ao staging `nsrwjtgzluadienwtnxt`. Não houve deploy de Supabase Edge Functions, migration ou escrita no banco. CRM oficial/produção `xpeqykpnwwhmgonymlap` e `crm.marketingcore.com.br` permaneceram intocados.
+
+
