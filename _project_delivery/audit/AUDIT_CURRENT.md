@@ -263,3 +263,12 @@ Arquivos rastreados modificados incluem páginas/componentes de Contacts, Tasks,
 - Verificação pública pós-deploy: página de login e JS carregados; bundle HTTP 200 contém `core_team_groups`, `team.manage` e a verificação de permissão antes do RPC. `config.js` aponta para o Supabase de staging e não contém service-role.
 - O primeiro Pages run (`41257916489`) falhou por testes de dashboard que pressupunham outubro como mês atual; o runner UTC já estava em 01/11. Os testes agora fixam explicitamente o intervalo de outubro. Suite serial 45/45 arquivos, 209/209; typecheck, build, deploy-gate 21/21 e diff-check aprovados.
 - O fluxo autenticado real ainda precisa ser confirmado por Maykelly; a senha enviada no chat não foi usada nem armazenada. Recomendar troca da senha e novo login/atualização da página. Nenhuma alteração/grant no banco, nenhum dado escrito e produção intocada.
+
+## 2026-11-04 — Aprovação de preview local e precommit
+
+- Lucas aprovou o preview local das alterações pendentes. Preview isolado `crm-pending-review` em `http://127.0.0.1:8771/`, build com configuração exclusiva de staging `nsrwjtgzluadienwtnxt`; health/teste do supervisor e HTTP 200 passaram. Nenhuma escrita remota ou produção.
+- Alterações incluem diálogo de criação de negociação a partir do perfil do lead, extração/refatoração da tela Pipeline, hardening de resolução/autorização do worker, testes e auditorias. O branch local `main` permanece 9 commits atrás de `origin/main`; nenhum commit ou push feito.
+- Revisão independente apontou risco de mutação parcial se a etapa remota da pipeline estivesse ausente. Corrigido: validar etapa antes de criar/atualizar contato; novo teste confirma zero mutações em etapa ausente.
+- Validação no estado corrigido: suíte serial 48 arquivos/225 testes aprovados; typecheck/build aprovados; `npm audit --audit-level=moderate` sem vulnerabilidades; `git diff --check` aprovado. Build conserva avisos conhecidos de `config.js` runtime e chunk >500 KB.
+- O diretório `_incoming_scalability_package/` contém material de referência parcial, incluindo arquivos compactados/dump de raciocínio; manter fora do commit de implementação. A revisão deve cobrir exatamente o conjunto de código/auditoria a ser commitado. Produção, banco, Git remoto e deploy não foram alterados.
+

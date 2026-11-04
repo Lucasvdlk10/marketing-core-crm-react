@@ -1,4 +1,4 @@
-import { CircleCheck, Filter, Link2, Pencil, Trash2, X, XCircle } from "lucide-react";
+import { CircleCheck, Filter, Pencil, Trash2, X, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { PageHeader, EmptyState } from "../components/common/PageHeader";
 import { getPipelines, type PipelineConfig } from "../lib/pipelines";
@@ -8,8 +8,7 @@ import {
   type MockLead,
 } from "../data/mockCrmData";
 import { LeadProfileDrawer } from "../components/contacts/LeadProfileDrawer";
-import { PhoneInput, phoneIdentity } from "../components/common/PhoneInput";
-import { getLeadSources } from "../lib/leadSources";
+import { DealCreateDialog, type Deal } from "../components/deals/DealCreateDialog";
 import { getLossReasons } from "../lib/lossReasons";
 import { getDealActions, subscribeDealActions } from "../lib/dealActions";
 import { loadRemoteCommercialSettings } from "../lib/workspaceSettings";
@@ -23,49 +22,16 @@ import {
   getRemoteSnapshot,
   isRemoteMode,
   REMOTE_UPDATED_EVENT,
-  remoteInsert,
   remoteDelete,
   remoteUpdate,
-  type RemoteContact,
 } from "../lib/remoteCrm";
 import {
-  createLeadRecord,
   getAllLeadTags,
   getEffectiveLeads,
   getLeadRecord,
   isLeadDeleted,
-  saveLeadRecord,
   subscribeLeadRecords,
 } from "../lib/leadRecords";
-
-type Deal = {
-  id: string;
-  pipelineId: string;
-  leadId: string;
-  name: string;
-  company: string;
-  contact: string;
-  phone: string;
-  stage: string;
-  value: number;
-  nextAction: string;
-  nextActionDate?: string;
-  lossReason?: string;
-  lossNotes?: string;
-  result?: "open" | "won" | "lost";
-};
-type DealDraft = {
-  name: string;
-  contact: string;
-  phone: string;
-  email: string;
-  company: string;
-  source: string;
-  value: string;
-  stage: string;
-  nextAction: string;
-  nextActionDate: string;
-};
 type SegmentListFilters = {
   tag: string;
   status: string;
@@ -128,7 +94,7 @@ const colors = [
   "#20A579",
   "#EB5C70",
 ];
-const normalizePhone = phoneIdentity;
+
 
 export function PipelinePage({ preview = false }: { preview?: boolean }) {
   const canWrite=currentCapability('deals.write',preview);const canDelete=currentCapability('deals.delete',preview);
@@ -168,25 +134,10 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
   const [filters, setFilters] = useState<PipelineFilters>(emptyFilters);
   const [filterDraft, setFilterDraft] = useState<PipelineFilters>(emptyFilters);
   const [modalOpen, setModalOpen] = useState(false);
-  const [dealCreating, setDealCreating] = useState(false);
-  const [dealCreateError, setDealCreateError] = useState("");
-  const [linkedLead, setLinkedLead] = useState<MockLead | null>(null);
+  const [dealLead, setDealLead] = useState<MockLead | null>(null);
   const [availableLeads, setAvailableLeads] =
     useState<MockLead[]>(getEffectiveLeads);
   const leadTags = getAllLeadTags();
-  const leadSources = getLeadSources();
-  const [draft, setDraft] = useState<DealDraft>({
-    name: "",
-    contact: "",
-    phone: "",
-    email: "",
-    company: "",
-    source: "",
-    value: "",
-    stage: "",
-    nextAction: "",
-    nextActionDate: "",
-  });
   useEffect(() => {
     const refresh = () => setPipelines(getPipelines());
     window.addEventListener("marketing-core-pipelines-updated", refresh);
@@ -370,158 +321,19 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
   }));
   const total = stages.reduce((sum, stage) => sum + stage.items.length, 0);
   const activeFilterCount = Object.entries(filters).filter(([key,value])=>key!=="outcome"&&Boolean(value)).length;
-  const phoneMatch = useMemo(() => {
-    const phone = normalizePhone(draft.phone);
-    const email = draft.email.trim().toLowerCase();
-    return (
-      availableLeads.find(
-        (lead) =>
-          (phone.length >= 8 && normalizePhone(lead.phone) === phone) ||
-          (email && lead.email.trim().toLowerCase() === email),
-      ) || null
-    );
-  }, [draft.phone, draft.email, availableLeads]);
   const openModal = () => {
-    if(!canWrite)return;
-    setLinkedLead(null);
-    setDealCreateError("");
-    setDraft({
-      name: "",
-      contact: "",
-      phone: "",
-      email: "",
-      company: "",
-      source: leadSources[0] || "",
-      value: "",
-      stage: selected.stages[0]?.name || "",
-      nextAction: "",
-      nextActionDate: "",
-    });
+    if (!canWrite) return;
+    setDealLead(null);
     setModalOpen(true);
   };
-  const updatePhone = (phone: string) => {
-    setDraft((current) => ({ ...current, phone }));
-    if (
-      linkedLead &&
-      normalizePhone(linkedLead.phone) !== normalizePhone(phone)
-    )
-      setLinkedLead(null);
+  const openModalForLead = (lead: MockLead) => {
+    if (!canWrite) return;
+    setDealLead(lead);
+    setModalOpen(true);
   };
-  const linkLead = (lead: MockLead) => {
-    setLinkedLead(lead);
-    setDraft((current) => ({
-      ...current,
-      contact: lead.name,
-      phone: lead.phone,
-      email: lead.email,
-      company: lead.company || current.company,
-      source: lead.source,
-    }));
-  };
-  const createDeal = async (event: FormEvent) => {
-    event.preventDefault();
-    if(!canWrite)return;
-    if (phoneMatch && !linkedLead) {
-      setDealCreateError(
-        "Vincule o lead encontrado antes de criar a negociação.",
-      );
-      return;
-    }
-    setDealCreating(true);
-    setDealCreateError("");
-    let lead = linkedLead;
-    try {
-      if (!lead) {
-        const localLead: MockLead = {
-          id: `lead-deal-${Date.now()}`,
-          name: draft.contact.trim(),
-          phone: draft.phone.trim(),
-          email: draft.email.trim(),
-          company: draft.company.trim(),
-          source: draft.source,
-          status: "Oportunidade",
-          createdAt: new Date().toLocaleDateString("pt-BR"),
-        };
-        if (isRemoteMode()) {
-          const created = await remoteInsert<RemoteContact>("core_contacts", {
-            name: localLead.name,
-            phone: localLead.phone,
-            email: localLead.email || null,
-            company: localLead.company || null,
-            source: localLead.source,
-            status: "qualified",
-          });
-          lead = { ...localLead, id: created.id };
-        } else {
-          await createLeadRecord(localLead);
-          lead = localLead;
-        }
-      } else if (!lead.company && draft.company.trim()) {
-        lead = { ...lead, company: draft.company.trim() };
-        if (isRemoteMode())
-          await remoteUpdate("core_contacts", lead.id, {
-            company: lead.company,
-          });
-        else {
-          const record = getLeadRecord(lead);
-          saveLeadRecord({ ...record, lead });
-        }
-      }
-      if (!draft.name.trim() || !lead.name || !lead.phone)
-        throw new Error(
-          "Preencha o nome da negociação, o contato e o telefone.",
-        );
-      const deal: Deal = {
-        id: `deal-${Date.now()}`,
-        pipelineId: selected.id,
-        leadId: lead.id,
-        name: draft.name.trim(),
-        company: lead.company || draft.company.trim() || "Sem empresa",
-        contact: lead.name,
-        phone: lead.phone,
-        stage: draft.stage,
-        value: Number(draft.value) || 0,
-        nextAction: draft.nextAction.trim() || "Definir próxima ação",
-        nextActionDate: draft.nextActionDate,
-      };
-      if (isRemoteMode()) {
-        const stage = remoteSnapshot?.stages.find(
-          (item) =>
-            item.pipeline_id === selected.id && item.name === draft.stage,
-        );
-        if (!stage)
-          throw new Error("Etapa da pipeline não encontrada no Supabase.");
-        await remoteInsert("core_deals", {
-          contact_id: lead.id,
-          pipeline_id: selected.id,
-          stage_id: stage.id,
-          name: deal.name,
-          value: String(deal.value),
-          status: stage.outcome,
-          expected_close: deal.nextActionDate || null,
-          notes: deal.nextAction || null,
-        });
-      } else setCreatedDeals((current) => [...current, deal]);
-      if (deal.nextActionDate && !isRemoteMode())
-        await saveScheduledDealAction({
-          dealId: deal.id,
-          dealName: deal.name,
-          leadId: deal.leadId,
-          leadName: deal.contact,
-          company: deal.company,
-          action: deal.nextAction,
-          date: deal.nextActionDate,
-        });
-      setModalOpen(false);
-    } catch (cause) {
-      setDealCreateError(
-        cause instanceof Error
-          ? cause.message
-          : "Não foi possível criar a negociação.",
-      );
-    } finally {
-      setDealCreating(false);
-    }
+  const closeCreateModal = () => {
+    setModalOpen(false);
+    setDealLead(null);
   };
   const beginEdit = () => {
     if(!canWrite)return;
@@ -814,7 +626,7 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
               <Filter size={18} />
               {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
             </button>
-            {canWrite&&<button className="btn primary" onClick={openModal}>+ Nova negociação</button>}
+            {canWrite&&<button className="btn primary" onClick={() => openModal()}>+ Nova negociação</button>}
           </div>
         }
       />
@@ -1379,6 +1191,8 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
       {selectedLead && (
         <LeadProfileDrawer
           lead={selectedLead}
+          preview={preview}
+          onCreateDeal={openModalForLead}
           onClose={() => setSelectedLead(null)}
         />
       )}
@@ -1451,232 +1265,17 @@ export function PipelinePage({ preview = false }: { preview?: boolean }) {
         </div>
       )}
 
-      {modalOpen && (
-        <div className="modal-backdrop" role="presentation">
-          <form
-            className="deal-create-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Registrar nova negociação"
-            onSubmit={createDeal}
-          >
-            <header>
-              <div>
-                <h2>Nova negociação</h2>
-                <p>
-                  Digite o telefone para localizar um lead existente. Se não
-                  houver correspondência, um novo lead será criado junto com a
-                  negociação.
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Fechar"
-                onClick={() => setModalOpen(false)}
-              >
-                <X size={18} />
-              </button>
-            </header>
-            <div className="deal-form-body">
-              <div className="form-grid">
-                <label className="field full">
-                  <span>Nome da negociação</span>
-                  <input
-                    aria-label="Nome da negociação"
-                    autoFocus
-                    required
-                    placeholder="Ex.: Contrato de suporte anual"
-                    value={draft.name}
-                    onChange={(event) =>
-                      setDraft({ ...draft, name: event.target.value })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>Nome do contato</span>
-                  <input
-                    aria-label="Nome do contato"
-                    required
-                    readOnly={Boolean(linkedLead)}
-                    value={draft.contact}
-                    onChange={(event) =>
-                      setDraft({ ...draft, contact: event.target.value })
-                    }
-                  />
-                </label>
-                <div className="field phone-field">
-                  <span>Telefone</span>
-                  <PhoneInput
-                    required
-                    value={draft.phone}
-                    onChange={updatePhone}
-                  />
-                </div>
-                <label className="field">
-                  <span>E-mail (opcional)</span>
-                  <input
-                    aria-label="E-mail do contato"
-                    type="email"
-                    readOnly={Boolean(linkedLead)}
-                    value={draft.email}
-                    onChange={(event) =>
-                      setDraft({ ...draft, email: event.target.value })
-                    }
-                    placeholder="contato@empresa.com.br"
-                  />
-                </label>
-                {phoneMatch && !linkedLead && (
-                  <div className="lead-match-card">
-                    <span>
-                      <Link2 size={17} />
-                    </span>
-                    <div>
-                      <strong>Lead encontrado</strong>
-                      <small>
-                        {phoneMatch.name} · {phoneMatch.company}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={`Vincular ${phoneMatch.name}`}
-                      onClick={() => linkLead(phoneMatch)}
-                    >
-                      Vincular lead
-                    </button>
-                  </div>
-                )}
-                {linkedLead && (
-                  <div className="linked-lead-card">
-                    <div>
-                      <strong>Negociação vinculada a {linkedLead.name}</strong>
-                      <span>
-                        Nome, telefone e e-mail usam os dados do lead. Se a
-                        empresa estiver vazia, ela será atualizada ao salvar.
-                      </span>
-                    </div>
-                    <button type="button" onClick={() => setLinkedLead(null)}>
-                      Desvincular
-                    </button>
-                  </div>
-                )}
-                <label className="field">
-                  <span>Empresa</span>
-                  <input
-                    aria-label="Empresa da negociação"
-                    readOnly={Boolean(linkedLead?.company)}
-                    value={draft.company}
-                    onChange={(event) =>
-                      setDraft({ ...draft, company: event.target.value })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>Origem do lead</span>
-                  <select
-                    aria-label="Origem do lead na negociação"
-                    required
-                    disabled={Boolean(linkedLead)}
-                    value={draft.source}
-                    onChange={(event) =>
-                      setDraft({ ...draft, source: event.target.value })
-                    }
-                  >
-                    {leadSources.map((source) => (
-                      <option key={source}>{source}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Valor da negociação</span>
-                  <input
-                    aria-label="Valor da negociação"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={draft.value}
-                    onChange={(event) =>
-                      setDraft({ ...draft, value: event.target.value })
-                    }
-                  />
-                </label>
-                <label className="field">
-                  <span>Etapa inicial</span>
-                  <select
-                    value={draft.stage}
-                    onChange={(event) =>
-                      setDraft({ ...draft, stage: event.target.value })
-                    }
-                  >
-                    {selected.stages.map((stage) => (
-                      <option key={stage.id} value={stage.name}>
-                        {stage.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Próxima ação</span>
-                  <select
-                    aria-label="Próxima ação inicial"
-                    value={draft.nextAction}
-                    onChange={(event) =>
-                      setDraft({ ...draft, nextAction: event.target.value })
-                    }
-                  >
-                    <option value="">Definir depois</option>
-                    {dealActions.map((action) => (
-                      <option key={action} value={action}>
-                        {action}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Data da próxima ação</span>
-                  <input
-                    aria-label="Data da próxima ação na criação"
-                    type="date"
-                    value={draft.nextActionDate}
-                    onChange={(event) =>
-                      setDraft({ ...draft, nextActionDate: event.target.value })
-                    }
-                  />
-                </label>
-              </div>
-              {dealCreateError && (
-                <div className="import-error deal-create-error" role="alert">
-                  {dealCreateError}
-                </div>
-              )}
-            </div>
-            <footer>
-              {phoneMatch && !linkedLead ? (
-                <span className="deal-link-required">
-                  Já existe um lead com este telefone ou e-mail. Vincule-o para
-                  evitar duplicidade.
-                </span>
-              ) : normalizePhone(draft.phone).length >= 8 && !linkedLead ? (
-                <span className="deal-new-lead-note">
-                  Novo contato: um lead será criado automaticamente.
-                </span>
-              ) : null}
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => setModalOpen(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="btn primary"
-                disabled={dealCreating || Boolean(phoneMatch && !linkedLead)}
-              >
-                {dealCreating ? "Criando…" : "Criar negociação"}
-              </button>
-            </footer>
-          </form>
-        </div>
+      {modalOpen && selected && (
+        <DealCreateDialog
+          pipeline={selected}
+          preview={preview}
+          initialLead={dealLead}
+          onClose={closeCreateModal}
+          onCreated={(deal) => {
+            if (!isRemoteMode())
+              setCreatedDeals((current) => [...current, deal]);
+          }}
+        />
       )}
     </>
   );
