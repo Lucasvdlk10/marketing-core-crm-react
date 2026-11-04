@@ -367,7 +367,7 @@ export function DealCreateDialog({
                 <div>
                   <strong>Negociação vinculada a {linkedLead.name}</strong>
                   <span>
-                    Nome, telefone e e-mail usam os dados do lead. Se a empresa estiver vazia, ela será atualizada ao salvar.
+                    Nome, telefone e e-mail usam os dados do lead. A criação da negociação não altera o contato.
                   </span>
                 </div>
                 <button type="button" onClick={() => setLinkedLead(null)}>Desvincular</button>
@@ -377,7 +377,7 @@ export function DealCreateDialog({
               <span>Empresa</span>
               <input
                 aria-label="Empresa da negociação"
-                readOnly={Boolean(linkedLead?.company)}
+                readOnly={Boolean(linkedLead)}
                 value={draft.company}
                 onChange={(event) => setDraft({ ...draft, company: event.target.value })}
               />
