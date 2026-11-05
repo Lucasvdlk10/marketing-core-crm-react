@@ -280,4 +280,13 @@ Arquivos rastreados modificados incluem páginas/componentes de Contacts, Tasks,
 - `f7748c0eca775ebcab8b05dcc2810174701999d0` foi lido de volta em `refs/heads/main`. GitHub Actions Pages workflow 41851727185 concluiu `success` para esse SHA.
 - Verificação pública pós-deploy: root do GitHub Pages HTTP 200 (`Marketing Core - CRM`), bundle JS HTTP 200, CSS HTTP 200; `config.js` aponta ao staging `nsrwjtgzluadienwtnxt`. Não houve deploy de Supabase Edge Functions, migration ou escrita no banco. CRM oficial/produção `xpeqykpnwwhmgonymlap` e `crm.marketingcore.com.br` permaneceram intocados.
 
+## 2026-11-05 — Integração do download do plugin WordPress no staging
+
+- Recebido `marketing-core-wordpress-connector.zip`, SHA-256 `2e2361298f33ad378b3758b911b7f53ab9683c78480622e631427d55081af0ee`; CRC passou. Preservado o ZIP original byte a byte em `public/downloads/marketing-core-wordpress-connector.zip`, junto dos 24 arquivos extraídos para oferecer código e documentação acessíveis.
+- A tela Integrações agora apresenta botão de download e guia com requisitos WordPress/PHP/HTTPS, Elementor Pro opcional, criação de webhook exclusivo, allowlist `MARKETING_CORE_ALLOWED_HOSTS`, perfil/mapeamento e cron. Aviso explícito de que o pacote ainda requer homologação em WordPress/Elementor reais.
+- `IntegrationsPage.test.tsx`: novo teste da URL/atributo de download e do guia; teste focado 5/5. Plugin: 50 assertions mockadas nos quatro scripts e `php -l` do arquivo principal passaram. Não houve WordPress/MySQL/Elementor real nem chamada ao webhook/CRM.
+- Suite React serial 50 arquivos/256 testes, typecheck/build, audit (0 vulnerabilidades) e diff-check passaram. Build com warnings conhecidos de config.js e chunk >500 KB.
+- Alteração local staged para commit e deploy exclusivamente ao GitHub Pages staging; produção e banco não tocados.
+
+
 
