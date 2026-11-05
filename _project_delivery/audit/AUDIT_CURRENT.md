@@ -286,7 +286,7 @@ Arquivos rastreados modificados incluem páginas/componentes de Contacts, Tasks,
 - A tela Integrações agora apresenta botão de download e guia com requisitos WordPress/PHP/HTTPS, Elementor Pro opcional, criação de webhook exclusivo, allowlist `MARKETING_CORE_ALLOWED_HOSTS`, perfil/mapeamento e cron. Aviso explícito de que o pacote ainda requer homologação em WordPress/Elementor reais.
 - `IntegrationsPage.test.tsx`: novo teste da URL/atributo de download e do guia; teste focado 5/5. Plugin: 50 assertions mockadas nos quatro scripts e `php -l` do arquivo principal passaram. Não houve WordPress/MySQL/Elementor real nem chamada ao webhook/CRM.
 - Suite React serial 50 arquivos/256 testes, typecheck/build, audit (0 vulnerabilidades) e diff-check passaram. Build com warnings conhecidos de config.js e chunk >500 KB.
-- Alteração local staged para commit e deploy exclusivamente ao GitHub Pages staging; produção e banco não tocados.
+- Integração aprovada na revisão independente (`deleg_e3c6a0db`): link aponta para o ZIP em `public/downloads`, arquivo e árvore extraída conferem (24 arquivos), limites de homologação estão claros. Commit `2ea9ea31566e0428fae499320db6d0d25547aef0` publicado em `main`; Actions run `42030073957` success. Read-back público: root, bundle, CSS e ZIP HTTP 200; texto do botão presente no bundle; config aponta para staging `nsrwjtgzluadienwtnxt`. Produção, Supabase e Edge Functions não foram alterados.
 
 
 
